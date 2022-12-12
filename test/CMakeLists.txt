@@ -1,0 +1,47 @@
+########################################################################
+# Test the key generation capabilities
+########################################################################
+
+set(TEST_VIPER_ED25519_KEY_GEN_SOURCES 
+    test_viper_ed25519_key_gen.cpp
+    ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
+    ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
+)
+ADD_EXECUTABLE(test_key_gen ${TEST_VIPER_ED25519_KEY_GEN_SOURCES})
+target_link_libraries(test_key_gen PRIVATE
+    botan::botan
+    Threads::Threads
+)
+ADD_TEST(Key_Generation test_key_gen)
+
+########################################################################
+# Test the Curve25519 internals
+########################################################################
+
+set(TEST_VIPER_ED25519_INTERNALS_SOURCES 
+    test_viper_ed25519_internals.cpp
+    ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
+    ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
+)
+ADD_EXECUTABLE(test_internals ${TEST_VIPER_ED25519_INTERNALS_SOURCES})
+target_link_libraries(test_internals PRIVATE
+    botan::botan
+    Threads::Threads
+)
+ADD_TEST(Internals test_internals)
+
+########################################################################
+# Recreate tests from the original ed25519-donna code.
+########################################################################
+
+set(TEST_VIPER_ED25519_DONNA_SOURCES 
+    test_viper_ed25519_donna.cpp
+    ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
+    ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
+)
+ADD_EXECUTABLE(test_donna ${TEST_VIPER_ED25519_DONNA_SOURCES})
+target_link_libraries(test_donna PRIVATE
+    botan::botan
+    Threads::Threads
+)
+ADD_TEST(Ed25519_Donna_Tests test_donna)

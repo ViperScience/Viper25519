@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# VS Code
+.vscode
+.devcontainer
+
+# Build
+build
+.build
+.local_build
+
+# CLion
+.idea
+cmake-build*
