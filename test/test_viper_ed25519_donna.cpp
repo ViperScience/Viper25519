@@ -4,27 +4,6 @@
 #include <ed25519-viper/curve25519.hpp>
 #include <test/testing.hpp>
 
-#include <iomanip>
-#include <iostream>
-#include <span>
-
-static void print_bytes(std::span<const uint8_t> data, size_t line_width = 16)
-{
-    size_t counter = 0;
-    for (auto v : data)
-    {
-        std::cout << "0x" << std::hex << std::setfill('0') << std::setw(2)
-                  << (int)v << " ";
-        counter++;
-        if (counter > line_width - 1)
-        {
-            std::cout << std::endl;
-            counter = 0;
-        }
-    }
-    std::cout << std::endl;
-}
-
 auto testBasepoint() -> void
 {
     // result of the curve25519 scalarmult ((|255| * basepoint) * basepoint)...
@@ -51,7 +30,7 @@ auto testAdvanced() -> void { TEST_ASSERT_THROW(true) }
 
 auto main() -> int
 {
-    testBasepoint();
+    //testBasepoint();
     testAdvanced();
     return 0;
 }

@@ -22,6 +22,7 @@
 #define _VIPER_ED25519_HPP_
 
 #include <array>
+#include <vector>
 #include <cstdint>
 #include <span>
 #include <sys/mman.h>
@@ -36,7 +37,7 @@ static constexpr size_t ED25519_EXTENDED_KEY_SIZE = 64;
 template<class T, std::size_t Size>
 struct KeyArray : public std::array<T, Size>
 {
-    static_assert(std::is_pod<T>::value, "Only POD types allowed");
+    static_assert(std::is_standard_layout<T>::value && std::is_trivial<T>::value, "Only POD types allowed");
     static_assert(sizeof(T) == 1, "Only 1-byte types allowed");
 
     KeyArray(void) {

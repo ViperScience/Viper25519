@@ -19,4 +19,5 @@ auto main() -> int
 {
     testKeyGen();
     testExtendedKeyGen();
+    return 0;
 }

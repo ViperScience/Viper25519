@@ -2727,7 +2727,7 @@ auto bignum25519::expand256_modm(std::span<const uint8_t> in) -> bignum25519
     // The input can technically be any size of bytes but its obviously setup
     // for either 32 or 64 bit keys. To avoid a memory access violation, we
     // need to fix the size.
-    if ((in.size() != 32) || (in.size() != 64))
+    if ((in.size() != 32) && (in.size() != 64))
         throw std::invalid_argument("Unexpected key size.");
 
     auto x = std::array<uint64_t, 8>{};

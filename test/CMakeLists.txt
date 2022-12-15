@@ -31,6 +31,28 @@ target_link_libraries(test_internals PRIVATE
 ADD_TEST(Internals test_internals)
 
 ########################################################################
+# Test the Bignum25519 primitives
+########################################################################
+
+ADD_EXECUTABLE(test_bignum25519 test_viper_ed25519_bignum25519.cpp)
+target_link_libraries(test_bignum25519 PRIVATE
+    botan::botan
+    Threads::Threads
+)
+ADD_TEST(Bignum25519 test_bignum25519)
+
+########################################################################
+# Test the Curve25519 primitives
+########################################################################
+
+ADD_EXECUTABLE(test_curve25519 test_viper_ed25519_curve25519.cpp)
+target_link_libraries(test_curve25519 PRIVATE
+    botan::botan
+    Threads::Threads
+)
+ADD_TEST(Curve25519 test_curve25519)
+
+########################################################################
 # Recreate tests from the original ed25519-donna code.
 ########################################################################
 
