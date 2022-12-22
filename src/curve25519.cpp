@@ -2221,9 +2221,9 @@ auto scalarmult_base_choose_niels(uint32_t pos, int8_t b) -> PackedPoint
     packed[0] = 1;
     packed[32] = 1;
 
-    auto windowb_equal = [](auto b, auto c) { return ((b ^ c) - 1) >> 31; };
+    auto windowb_equal = [](uint32_t b, uint32_t c) { return ((b ^ c) - 1) >> 31; };
 
-    for (auto i = 0UL; i < 8; i++)
+    for (uint32_t i = 0; i < 8; i++)
         move_conditional_bytes(
             packed, basepoint_multiples_packed[(pos * 8) + i],
             windowb_equal(u, i + 1)
@@ -2239,7 +2239,7 @@ auto scalarmult_base_choose_niels(uint32_t pos, int8_t b) -> PackedPoint
     auto neg = t2d.neg();
     swap_conditional(t2d, neg, sign);
 
-    return PackedPoint({ysubx, xaddy, t2d});
+    return PackedPoint({xaddy, ysubx, t2d});
 }  // ExtendedPoint::scalarmult_base_choose_niels
 
 }  // unnamed namespace
@@ -2381,6 +2381,13 @@ auto bignum25519::subReduce(bignum25519 const &rhs) const -> bignum25519
     return out;
 }  // bignum25519::subReduce
 
+auto bignum25519::subAfterBasic(bignum25519 const &rhs) const -> bignum25519
+{
+    auto out = *this;
+    for (size_t i = 0; i < this->size(); ++i) out[i] += (px4[i] - rhs[i]);
+    return out;
+} // bignum25519::subAfterBasic
+
 auto bignum25519::neg() const -> bignum25519
 {
     auto out = bignum25519();
@@ -2507,7 +2514,7 @@ auto bignum25519::pow_two5mtwo0_two250mtwo0() const -> bignum25519
     auto b alignas(16) = this->mul(t0);
 
     // t0 = 2^20 - 2^10
-    t0 = this->squareTimes(10);
+    t0 = b.squareTimes(10);
 
     // c = 2^20 - 2^0
     auto c alignas(16) = t0 * b;
@@ -2792,8 +2799,8 @@ auto PartialPoint::doubleCompleted() const -> CompletedPoint
     rx = rx.square();
     auto ry = b + a;
     auto rz = b - a;
-    rx = rx - ry;
-    auto rt = c - rz;
+    rx = rx.subAfterBasic(ry);
+    auto rt = c.subAfterBasic(rz);
     return CompletedPoint({rx, ry, rz, rt});
 }
 
@@ -2872,8 +2879,8 @@ auto ExtendedPoint::doubleCompleted() const -> CompletedPoint
     rx = rx.square();
     auto ry = b + a;
     auto rz = b - a;
-    rx = rx - ry;
-    auto rt = c - rz;
+    rx = rx.subAfterBasic(ry);
+    auto rt = c.subAfterBasic(rz);
     return CompletedPoint({rx, ry, rz, rt});
 }
 
@@ -2882,6 +2889,37 @@ auto ExtendedPoint::doublePartial() const -> PartialPoint
     auto t = this->doubleCompleted();
     return t.toPartial();
 }
+
+// static void
+// ge25519_scalarmult_base_niels(ge25519 *r, const uint8_t basepoint_table[256][96], const bignum256modm s) {
+// 	signed char b[64];
+// 	uint32_t i;
+// 	ge25519_niels t;
+
+// 	contract256_window4_modm(b, s);
+
+// 	ge25519_scalarmult_base_choose_niels(&t, basepoint_table, 0, b[1]);
+// 	curve25519_sub_reduce(r->x, t.xaddy, t.ysubx);
+// 	curve25519_add_reduce(r->y, t.xaddy, t.ysubx);
+// 	memset(r->z, 0, sizeof(bignum25519));
+// 	curve25519_copy(r->t, t.t2d);
+// 	r->z[0] = 2;	
+// 	for (i = 3; i < 64; i += 2) {
+// 		ge25519_scalarmult_base_choose_niels(&t, basepoint_table, i / 2, b[i]);
+// 		ge25519_nielsadd2(r, &t);
+// 	}
+// 	ge25519_double_partial(r, r);
+// 	ge25519_double_partial(r, r);
+// 	ge25519_double_partial(r, r);
+// 	ge25519_double(r, r);
+// 	ge25519_scalarmult_base_choose_niels(&t, basepoint_table, 0, b[0]);
+// 	curve25519_mul(t.t2d, t.t2d, ge25519_ecd);
+// 	ge25519_nielsadd2(r, &t);
+// 	for(i = 2; i < 64; i += 2) {
+// 		ge25519_scalarmult_base_choose_niels(&t, basepoint_table, i / 2, b[i]);
+// 		ge25519_nielsadd2(r, &t);
+// 	}
+// }
 
 auto ExtendedPoint::multiplyBasepointByScalar(bignum25519 const &s)
     -> ExtendedPoint
@@ -2946,8 +2984,6 @@ auto curve25519::scalarmult_basepoint(std::array<uint8_t, 32> e) -> std::array<u
 
     // u = (y + z) / (z - y)
     auto yplusz = p.y() + p.z();
-    auto zminusy = p.z() - p.y();
-    zminusy = zminusy.recip();
-    yplusz = yplusz * zminusy;
-    return bignum25519::contract(yplusz);
+    auto zminusy = (p.z() - p.y()).recip();
+    return bignum25519::contract(yplusz * zminusy);
 }  // scalarmult_basepoint

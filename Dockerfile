@@ -32,9 +32,11 @@ RUN git clone https://github.com/randombit/botan.git \
 # Build, test, and install the ed25519-viper library
 WORKDIR /opt
 COPY . /opt
-ENV CTEST_OUTPUT_ON_FAILURE=1
-RUN mkdir build && cd build \
- && cmake -DCMAKE_BUILD_TYPE=Release .. \
- && make -j16 \
- && make test
-# && make install
+# ENV CTEST_OUTPUT_ON_FAILURE=1
+RUN cmake -S . -B debug/ -D CMAKE_BUILD_TYPE=Debug \
+  && cmake --build debug/ --parallel 8 \
+  && ctest --test-dir debug/ --output-on-failure -T Test -T Coverage
+RUN cmake -S . -B release/ -D CMAKE_BUILD_TYPE=Release \
+  && cmake --build release/ --parallel 8 \
+  && ctest --test-dir debug/ --output-on-failure
+

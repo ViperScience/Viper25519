@@ -14,14 +14,9 @@ auto testBasepoint() -> void
         0xd7, 0x93, 0xd5, 0x19, 0xb6, 0xf1, 0xfb, 0x96, 0xd6, 0x04};
 
     auto csk = std::array<std::array<uint8_t, 32>, 2>{{{255}}};
-    //for (auto &a : csk) a.fill(255);
 
     for (uint32_t i = 0; i < 1024; i++)
         csk[(i & 1) ^ 1] = curve25519::scalarmult_basepoint(csk[i & 1]);
-
-    print_bytes(csk[0]);
-    print_bytes(csk[1]);
-    print_bytes(curved25519_expected);
 
     TEST_ASSERT_THROW(csk[0] == curved25519_expected)
 }
@@ -30,7 +25,7 @@ auto testAdvanced() -> void { TEST_ASSERT_THROW(true) }
 
 auto main() -> int
 {
-    //testBasepoint();
+    testBasepoint();
     testAdvanced();
     return 0;
 }

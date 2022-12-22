@@ -11,13 +11,22 @@ project(ed25519-viper
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Default to Release build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 # Specifiy compiler flags
 if (MSVC)
     add_compile_options(/W4 /WX)
 else()
-    # add_compile_options(
-    #     -Wall -Wextra -Wshadow -Wconversion -Wpedantic # -Werror
-    # )
+    add_compile_options(
+        -Wall -Wextra -Wshadow -Wconversion -Wpedantic # -Werror
+        "$<$<CONFIG:DEBUG>:-g;-O0;--coverage>"
+    )
+    add_link_options(
+        "$<$<CONFIG:DEBUG>:--coverage>"
+    )
 endif()
 
 ################################################################################
@@ -39,9 +48,6 @@ endif()
 
 # Add 3rd party libraries that should be installed on the system
 find_package(Botan REQUIRED)
-
-# # Add the submodules
-# add_subdirectory(${CMAKE_SOURCE_DIR}/libs)
 
 ################################################################################
 # Include directories
@@ -68,9 +74,14 @@ include_directories(${PROJECT_NAME}
 
 # Enable testing globally. Individual tests may be found in the `tests`
 # subdirectory of the repository.
-ENABLE_TESTING()
 
-ADD_SUBDIRECTORY(test build)
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CTestCustom.cmake.in 
+    ${CMAKE_BINARY_DIR}/CTestCustom.cmake
+)
+include(CTest)
+enable_testing()
+add_subdirectory(test) 
 
 ################################################################################
 # Target Build and Link

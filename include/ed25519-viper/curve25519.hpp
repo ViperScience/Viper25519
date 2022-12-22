@@ -76,6 +76,8 @@ struct bignum25519 : public std::array<uint64_t, 5>
 
     auto subReduce(bignum25519 const &rhs) const -> bignum25519;
 
+    auto subAfterBasic(bignum25519 const &rhs) const -> bignum25519;
+
     auto neg() const -> bignum25519;
 
     auto mul(bignum25519 const &rhs) const -> bignum25519;
