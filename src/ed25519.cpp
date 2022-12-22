@@ -29,8 +29,8 @@
 #include <botan/system_rng.h>
 
 // Public Cardano++ Headers
-#include <ed25519-viper/ed25519.hpp>
 #include <ed25519-viper/curve25519.hpp>
+#include <ed25519-viper/ed25519.hpp>
 
 using namespace ed25519;
 
@@ -117,7 +117,9 @@ auto PrivateKey::publicKey() const -> PublicKey
 }  // PrivateKey::publicKey
 
 // void
-// ED25519_FN(ed25519_sign) (const unsigned char *m, size_t mlen, const unsigned char *salt, size_t slen, const ed25519_secret_key sk, const ed25519_public_key pk, ed25519_signature RS) {
+// ED25519_FN(ed25519_sign) (const unsigned char *m, size_t mlen, const unsigned
+// char *salt, size_t slen, const ed25519_secret_key sk, const
+// ed25519_public_key pk, ed25519_signature RS) {
 //     ed25519_hash_context ctx;
 //     bignum256modm r, S, a;
 //     ge25519 ALIGN(16) R;
@@ -159,7 +161,6 @@ auto PrivateKey::sign(std::span<const uint8_t> msg) const
     -> std::vector<uint8_t>
 {
     // r = H(aExt[32..64], m)
-    
 
     auto zeros = std::vector<uint8_t>{};
     zeros.push_back(msg[0]);  // remove compiler warning for now
@@ -172,6 +173,12 @@ PublicKey::PublicKey(std::span<const uint8_t> pub)
         throw std::invalid_argument("Not a valid Ed25519 key.");
     std::move(pub.begin(), pub.begin() + ED25519_KEY_SIZE, this->pub_.begin());
 }  // PublicKey::PublicKey
+
+auto PublicKey::bytes() const -> std::array<uint8_t, ED25519_KEY_SIZE>
+{
+    auto copy = this->pub_;
+    return copy;
+}  // PublicKey::bytes
 
 ExtendedPrivateKey::ExtendedPrivateKey(std::span<const uint8_t> prv)
 {

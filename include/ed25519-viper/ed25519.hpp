@@ -21,11 +21,12 @@
 #ifndef _VIPER_ED25519_HPP_
 #define _VIPER_ED25519_HPP_
 
+#include <sys/mman.h>
+
 #include <array>
-#include <vector>
 #include <cstdint>
 #include <span>
-#include <sys/mman.h>
+#include <vector>
 
 namespace ed25519
 {
@@ -34,20 +35,21 @@ static constexpr size_t ED25519_KEY_SIZE = 32;
 static constexpr size_t ED25519_EXTENDED_KEY_SIZE = 64;
 
 // To-Do: rewrite this...
-template<class T, std::size_t Size>
+template <class T, std::size_t Size>
 struct KeyArray : public std::array<T, Size>
 {
-    static_assert(std::is_standard_layout<T>::value && std::is_trivial<T>::value, "Only POD types allowed");
+    static_assert(
+        std::is_standard_layout<T>::value && std::is_trivial<T>::value,
+        "Only POD types allowed"
+    );
     static_assert(sizeof(T) == 1, "Only 1-byte types allowed");
 
-    KeyArray(void) {
-        mlock(std::array<T, Size>::data(), sizeof(T) * Size);
-    }
+    KeyArray(void) { mlock(std::array<T, Size>::data(), sizeof(T) * Size); }
 
-    ~KeyArray(void) {
+    ~KeyArray(void)
+    {
         char *bytes = reinterpret_cast<char *>(std::array<T, Size>::data());
-        for (std::size_t i = 0; i < sizeof(T) * Size; i++)
-            bytes[i] = 0;
+        for (std::size_t i = 0; i < sizeof(T) * Size; i++) bytes[i] = 0;
         munlock(bytes, sizeof(T) * Size);
     }
 };
@@ -72,7 +74,7 @@ class PrivateKey
 
   public:
     /// @brief Construct a key object from a span of key bytes.
-    /// @param prv A span of 32 bytes that will be moved into the object. 
+    /// @param prv A span of 32 bytes that will be moved into the object.
     PrivateKey(std::span<const uint8_t> prv);
 
     /// Factory method to create a new Ed25519 private key from a
@@ -89,9 +91,10 @@ class PrivateKey
     [[nodiscard]] auto publicKey() const -> PublicKey;
 
     /// Generate a message signature from the private key.
-    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const -> std::vector<uint8_t>;
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
+        -> std::vector<uint8_t>;
 
-}; // PrivateKey
+};  // PrivateKey
 
 class PublicKey
 {
@@ -100,16 +103,18 @@ class PublicKey
     std::array<uint8_t, ED25519_KEY_SIZE> pub_{};
 
   public:
-    constexpr PublicKey(std::array<uint8_t, ED25519_KEY_SIZE> pub)
-        : pub_{pub}
+    constexpr PublicKey(std::array<uint8_t, ED25519_KEY_SIZE> pub) : pub_{pub}
     {
     }
 
     PublicKey(std::span<const uint8_t> pub);
 
+    /// Return the public key as a byte vector.
+    [[nodiscard]] auto bytes() const -> std::array<uint8_t, ED25519_KEY_SIZE>;
+
     // verify signature
 
-}; // PublicKey
+};  // PublicKey
 
 class ExtendedPrivateKey
 {
@@ -131,10 +136,10 @@ class ExtendedPrivateKey
     [[nodiscard]] auto publicKey() const -> PublicKey;
 
     /// Generate a message signature from the private key.
-    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const -> std::vector<uint8_t>;
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
+        -> std::vector<uint8_t>;
 
-}; // ExtendedPrivateKey
-
+};  // ExtendedPrivateKey
 
 }  // namespace ed25519
 
