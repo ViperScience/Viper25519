@@ -1,3 +1,7 @@
+stages:
+  - build
+  - test
+
 docker-build:
   image: docker:latest
   stage: build
@@ -23,3 +27,12 @@ docker-build:
     - if: $CI_COMMIT_BRANCH
       exists:
         - Dockerfile
+
+coverage:
+  image: "$CI_REGISTRY_IMAGE"
+  stage: test
+  script:
+    - cd /opt
+    - curl -Os https://uploader.codecov.io/latest/linux/codecov
+    - chmod +x codecov
+    - ./codecov
