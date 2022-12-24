@@ -1,4 +1,9 @@
 # Viper Ed25519
+[![build](https://gitlab.com/viper-staking/ed25519-viper/badges/main/pipeline.svg)](https://gitlab.com/ed25519-viper/-/commits/main)
+[![codecov](https://codecov.io/gl/viper-staking/ed25519-viper/branch/main/graph/badge.svg?token=B7F7UR16TG)](https://codecov.io/gl/viper-staking/ed25519-viper)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+
 An implementation of the Ed25519 elliptic curve digital signature standard in
 modern C++. The library is largley based on the popular Ed25519-donna constant 
 time implementation with support for
