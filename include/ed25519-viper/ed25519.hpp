@@ -33,6 +33,7 @@ namespace ed25519
 
 static constexpr size_t ED25519_KEY_SIZE = 32;
 static constexpr size_t ED25519_EXTENDED_KEY_SIZE = 64;
+static constexpr size_t ED25519_SIGNATURE_SIZE = 64;
 
 // To-Do: rewrite this...
 template <class T, std::size_t Size>
@@ -92,7 +93,7 @@ class PrivateKey
 
     /// Generate a message signature from the private key.
     [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
-        -> std::vector<uint8_t>;
+        -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>;
 
 };  // PrivateKey
 
@@ -125,6 +126,9 @@ class ExtendedPrivateKey
   public:
     ExtendedPrivateKey(std::span<const uint8_t> prv);
 
+    /// Return the public key as a secure byte vector.
+    [[nodiscard]] auto bytes() const -> ExtKeyBytes;
+
     /// Factory method to create a new Ed25519 private key from a
     /// cryptographically secure random number generator.
     [[nodiscard]] static auto generate() -> ExtendedPrivateKey;
@@ -137,7 +141,7 @@ class ExtendedPrivateKey
 
     /// Generate a message signature from the private key.
     [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
-        -> std::vector<uint8_t>;
+        -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>;
 
 };  // ExtendedPrivateKey
 

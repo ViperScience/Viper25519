@@ -21,7 +21,7 @@ if (MSVC)
     add_compile_options(/W4 /WX)
 else()
     add_compile_options(
-        -Wall -Wextra -Wshadow -Wconversion -Wpedantic # -Werror
+        -Wall -Wextra -Wshadow -Wconversion -Wpedantic -Werror
         "$<$<CONFIG:DEBUG>:-g;-O0;--coverage>"
     )
     add_link_options(

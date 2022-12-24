@@ -1,9 +1,23 @@
 #include <ed25519-viper/curve25519.hpp>
+
 #include "testing.hpp"
 
 // We need to test private code so we include the source file instead of linking
 // during build.
 #include "src/curve25519.cpp"
+
+auto test_contract256_modm()
+{
+    constexpr auto bytes_donna = std::array<uint8_t, 32>{
+        0x0f, 0x6a, 0xee, 0x6f, 0x51, 0xab, 0xec, 0x4f, 0xb4, 0xd7, 0x7c,
+        0x22, 0x5b, 0x11, 0xf3, 0x46, 0x44, 0x49, 0xc5, 0x69, 0x7b, 0x32,
+        0x69, 0x19, 0x70, 0x3b, 0xac, 0x03, 0x1c, 0xae, 0x7f, 0x00};
+    constexpr auto in = curve25519::bignum25519{
+        0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
+        0x0003ac3b70196932, 0x00000000007fae1c};
+    auto bytes = bignum25519::contract256_modm(in);
+    TEST_ASSERT_THROW(bytes == bytes_donna)
+}
 
 auto test_contract256_window4_modm()
 {
@@ -75,16 +89,16 @@ auto test_bignum25519_swap_conditional()
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
         0x0003ac3b70196932, 0x00000000007fae1c};
     constexpr auto b_const = curve25519::bignum25519{
-        0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
-        0x0003ac3b70196932, 0x00000000007fae1c};
-    
+        0x00003905d740913e, 0x0000ba2817d673a2, 0x00023e2827f4e67c,
+        0x000133d2e0c21a34, 0x00044fd2f9298f81};
+
     auto a = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
         0x0003ac3b70196932, 0x00000000007fae1c};
     auto b = curve25519::bignum25519{
-        0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
-        0x0003ac3b70196932, 0x00000000007fae1c};
-    
+        0x00003905d740913e, 0x0000ba2817d673a2, 0x00023e2827f4e67c,
+        0x000133d2e0c21a34, 0x00044fd2f9298f81};
+
     swap_conditional(a, b, 0);
     TEST_ASSERT_THROW(a == a_const)
     TEST_ASSERT_THROW(b == b_const)
@@ -100,7 +114,7 @@ auto test_bignum25519_neg()
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
         0x0003ac3b70196932, 0x00000000007fae1c};
     constexpr auto neg_donna = curve25519::bignum25519{
-        0x000354ae901195de, 0x0006a4dd83286b93, 0x0004963ab6bbd90a, 
+        0x000354ae901195de, 0x0006a4dd83286b93, 0x0004963ab6bbd90a,
         0x000453c48fe6b6be, 0x0007ffffff8051e3};
     TEST_ASSERT_THROW(in.neg() == neg_donna)
 }
@@ -111,7 +125,7 @@ auto test_bignum25519_addReduce()
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
         0x0003ac3b70196932, 0x00000000007fae1c};
     constexpr auto res_donna = curve25519::bignum25519{
-        0x000156a2dfdcd41e, 0x0002b644f9af68d9, 0x0006d38a92888dea, 
+        0x000156a2dfdcd41e, 0x0002b644f9af68d9, 0x0006d38a92888dea,
         0x00075876e032d282, 0x0000000000ff5c38};
     TEST_ASSERT_THROW(in.addReduce(in) == res_donna)
 }
@@ -123,7 +137,7 @@ auto test_bignum25519_squareTimes()
         0x0003ac3b70196932, 0x00000000007fae1c};
     constexpr auto res_donna = curve25519::bignum25519{
         0x000359048f567c22, 0x000647e2c934680e, 0x00014bf662215d18,
-        0x0005b33c440e32a7, 0x0005fc478404ae75}; 
+        0x0005b33c440e32a7, 0x0005fc478404ae75};
 
     TEST_ASSERT_THROW(in.squareTimes(5) == res_donna)
 }
@@ -150,8 +164,39 @@ auto test_bignum25519_recip()
     TEST_ASSERT_THROW(in.recip() == res_donna)
 }
 
+auto test_bignum25519_add256_modm()
+{
+    constexpr auto x = curve25519::bignum25519{
+        0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
+        0x0003ac3b70196932, 0x00000000007fae1c};
+    constexpr auto y = curve25519::bignum25519{
+        0x00003905d740913e, 0x0000ba2817d673a2, 0x00023e2827f4e67c,
+        0x000133d2e0c21a34, 0x00044fd2f9298f81};
+    constexpr auto r = curve25519::bignum25519{
+        0x00da813cea392760, 0x001836a79d115199, 0x007da7ed71391890,
+        0x0004e00e50db8366, 0x00044fd2e9a93d9d};
+
+    TEST_ASSERT_THROW(curve25519::bignum25519::add256_modm(x, y) == r)
+}
+
+auto test_bignum25519_mul256_modm()
+{
+    constexpr auto x = curve25519::bignum25519{
+        0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
+        0x0003ac3b70196932, 0x00000000007fae1c};
+    constexpr auto y = curve25519::bignum25519{
+        0x00003905d740913e, 0x0000ba2817d673a2, 0x00023e2827f4e67c,
+        0x000133d2e0c21a34, 0x00044fd2f9298f81};
+    constexpr auto r = curve25519::bignum25519{
+        0x00b2f1b400f3561c, 0x004b4f2b65106226, 0x00ec9086adfadc93,
+        0x0091f1638f8bce32, 0x000000079e7d6a70};
+
+    TEST_ASSERT_THROW(curve25519::bignum25519::mul256_modm(x, y) == r)
+}
+
 auto main() -> int
 {
+    test_contract256_modm();
     test_contract256_window4_modm();
     test_expand256_modm();
     test_bignum25519_expand();
@@ -161,5 +206,7 @@ auto main() -> int
     test_bignum25519_squareTimes();
     test_bignum25519_pow_two5mtwo0_two250mtwo0();
     test_bignum25519_recip();
+    test_bignum25519_add256_modm();
+    test_bignum25519_mul256_modm();
     return 0;
 }

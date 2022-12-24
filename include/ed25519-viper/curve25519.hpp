@@ -116,10 +116,19 @@ struct bignum25519 : public std::array<uint64_t, 5>
         const bignum25519 &q1, const bignum25519 &r1
     ) -> bignum25519;
 
+    static auto add256_modm(const bignum25519 &lhs, const bignum25519 &rhs)
+        -> bignum25519;
+
+    static auto mul256_modm(const bignum25519 &lhs, const bignum25519 &rhs)
+        -> bignum25519;
+
     static auto expand256_modm(std::span<const uint8_t> in) -> bignum25519;
 
     static auto expand_raw256_modm(std::array<uint8_t, 32> const &in)
         -> bignum25519;
+
+    static auto contract256_modm(bignum25519 const &in)
+        -> std::array<uint8_t, 32>;
 
 };  // bignum25519
 

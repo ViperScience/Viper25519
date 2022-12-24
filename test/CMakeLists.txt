@@ -15,6 +15,22 @@ target_link_libraries(test_key_gen PRIVATE
 ADD_TEST(Key_Generation test_key_gen)
 
 ########################################################################
+# Test basic signature capabilities
+########################################################################
+
+set(TEST_VIPER_ED25519_SIGNATURES_SOURCES 
+    test_viper_ed25519_signatures.cpp
+    ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
+    ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
+)
+ADD_EXECUTABLE(test_signatures ${TEST_VIPER_ED25519_SIGNATURES_SOURCES})
+target_link_libraries(test_signatures PRIVATE
+    botan::botan
+    Threads::Threads
+)
+ADD_TEST(Signatures test_signatures)
+
+########################################################################
 # Test the Curve25519 internals
 ########################################################################
 

@@ -116,55 +116,11 @@ auto PrivateKey::publicKey() const -> PublicKey
     return ext_key.publicKey();
 }  // PrivateKey::publicKey
 
-// void
-// ED25519_FN(ed25519_sign) (const unsigned char *m, size_t mlen, const unsigned
-// char *salt, size_t slen, const ed25519_secret_key sk, const
-// ed25519_public_key pk, ed25519_signature RS) {
-//     ed25519_hash_context ctx;
-//     bignum256modm r, S, a;
-//     ge25519 ALIGN(16) R;
-//     hash_512bits extsk, hashr, hram;
-//
-// #ifdef VARIANT_CODE
-//     memcpy(extsk, sk, 64);
-// #else
-//     ed25519_extsk(extsk, sk);
-// #endif
-//
-//     /* r = H(aExt[32..64], m) */
-//     ed25519_hash_init(&ctx);
-//     ed25519_hash_update(&ctx, extsk + 32, 32);
-//     ed25519_hash_update(&ctx, m, mlen);
-//     ed25519_hash_final(&ctx, hashr);
-//     expand256_modm(r, hashr, 64);
-//
-//     /* R = rB */
-//     ge25519_scalarmult_base_niels(&R, ge25519_niels_base_multiples, r);
-//     ge25519_pack(RS, &R);
-//
-//     /* S = H(R,A,m).. */
-//     ed25519_hram(hram, RS, pk, m, mlen);
-//     expand256_modm(S, hram, 64);
-//
-//     /* S = H(R,A,m)a */
-//     expand256_modm(a, extsk, 32);
-//     mul256_modm(S, S, a);
-//
-//     /* S = (r + H(R,A,m)a) */
-//     add256_modm(S, S, r);
-//
-//     /* S = (r + H(R,A,m)a) mod L */
-//     contract256_modm(RS + 32, S);
-// }
-
 auto PrivateKey::sign(std::span<const uint8_t> msg) const
-    -> std::vector<uint8_t>
+    -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
 {
-    // r = H(aExt[32..64], m)
-
-    auto zeros = std::vector<uint8_t>{};
-    zeros.push_back(msg[0]);  // remove compiler warning for now
-    return zeros;
+    auto ext_key = this->extend();
+    return ext_key.sign(msg);
 }  // PrivateKey::sign
 
 PublicKey::PublicKey(std::span<const uint8_t> pub)
@@ -207,6 +163,12 @@ auto ExtendedPrivateKey::isValid() const -> bool
     );
 }  // ExtendedPrivateKey::isValid
 
+auto ExtendedPrivateKey::bytes() const -> ExtKeyBytes
+{
+    auto copy = this->prv_;
+    return copy;
+}  // ExtendedPrivateKey::bytes
+
 auto ExtendedPrivateKey::publicKey() const -> PublicKey
 {
     // Expand the lower 32 bytes of the private key to large scalar
@@ -222,9 +184,43 @@ auto ExtendedPrivateKey::publicKey() const -> PublicKey
 }  // ExtendedPrivateKey::publicKey
 
 auto ExtendedPrivateKey::sign(std::span<const uint8_t> msg) const
-    -> std::vector<uint8_t>
+    -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
 {
-    auto zeros = std::vector<uint8_t>{};
-    zeros.push_back(msg[0]);  // remove compiler warning for now
-    return zeros;
+    // Derive the public key
+    auto pk = this->publicKey().bytes();
+
+	// r = H(aExt[32..64], m)
+    const auto sha512 = Botan::HashFunction::create("SHA-512");
+    sha512->update(this->prv_.data() + 32, 32);
+    sha512->update(msg.data(), msg.size());
+    auto hashr = sha512->final();
+    auto r = curve25519::bignum25519::expand256_modm(hashr);
+
+    // R = rB 
+    auto rb = curve25519::ExtendedPoint::multiplyBasepointByScalar(r);
+    auto rs = rb.pack();
+
+    // S = H(R,A,m)..
+    sha512->update(rs.data(), rs.size());
+    sha512->update(pk.data(), pk.size());
+    sha512->update(msg.data(), msg.size());
+    auto hram = sha512->final();
+    auto s = curve25519::bignum25519::expand256_modm(hram);
+
+    // S = H(R,A,m)a
+    auto kl = std::span<const uint8_t>{this->prv_.data(), 32};
+    auto a = curve25519::bignum25519::expand256_modm(kl);
+    s = curve25519::bignum25519::mul256_modm(s, a);
+
+    // S = (r + H(R,A,m)a)
+    s = curve25519::bignum25519::add256_modm(s, r);
+
+    // S = (r + H(R,A,m)a) mod L
+    auto sbytes = curve25519::bignum25519::contract256_modm(s);
+
+    // Return the complete signature
+    auto sig = std::array<uint8_t, ED25519_SIGNATURE_SIZE>{};
+    std::copy_n(rs.begin(), 32, sig.begin());
+    std::copy_n(sbytes.begin(), 32, sig.begin() + 32);
+    return sig;
 }  // ExtendedPrivateKey::sign

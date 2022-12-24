@@ -29,7 +29,7 @@ typedef boost::multiprecision::int128_t uint128_t;
 typedef __uint128_t uint128_t;
 #endif
 
-// Public Cardano++ Headers
+// Public Viper Ed25519 Headers
 #include <ed25519-viper/curve25519.hpp>
 
 using namespace curve25519;
@@ -48,6 +48,20 @@ constexpr auto U8TO64_LE(const uint8_t *p) -> uint64_t
         ((uint64_t)(p[6]) << 48) | ((uint64_t)(p[7]) << 56)
     );
 }  // U8TO64_LE
+
+constexpr auto U64TO8_LE(std::span<uint8_t> out, const uint64_t v) -> void
+{
+    if (out.size() < 8)
+        throw std::invalid_argument("Input must be at least 8 bytes");
+    out[0] = (uint8_t)v;
+    out[1] = (uint8_t)(v >> 8);
+    out[2] = (uint8_t)(v >> 16);
+    out[3] = (uint8_t)(v >> 24);
+    out[4] = (uint8_t)(v >> 32);
+    out[5] = (uint8_t)(v >> 40);
+    out[6] = (uint8_t)(v >> 48);
+    out[7] = (uint8_t)(v >> 56);
+}  // U64TO8_LE
 
 constexpr auto shr128(uint128_t in, size_t shift) -> uint64_t
 {
@@ -2221,7 +2235,8 @@ auto scalarmult_base_choose_niels(uint32_t pos, int8_t b) -> PackedPoint
     packed[0] = 1;
     packed[32] = 1;
 
-    auto windowb_equal = [](uint32_t b, uint32_t c) { return ((b ^ c) - 1) >> 31; };
+    auto windowb_equal = [](uint32_t b, uint32_t c)
+    { return ((b ^ c) - 1) >> 31; };
 
     for (uint32_t i = 0; i < 8; i++)
         move_conditional_bytes(
@@ -2386,7 +2401,7 @@ auto bignum25519::subAfterBasic(bignum25519 const &rhs) const -> bignum25519
     auto out = *this;
     for (size_t i = 0; i < this->size(); ++i) out[i] += (px4[i] - rhs[i]);
     return out;
-} // bignum25519::subAfterBasic
+}  // bignum25519::subAfterBasic
 
 auto bignum25519::neg() const -> bignum25519
 {
@@ -2586,7 +2601,7 @@ auto bignum25519::reduce256_modm(const bignum25519 &r) -> bignum25519
     for (size_t i = 0; i < r.size(); ++i) out[i] ^= mask & (r[i] ^ t[i]);
 
     return out;
-}  // Curve25519::reduce256_modm
+}  // bignum25519::reduce256_modm
 
 auto bignum25519::barrett_reduce256_modm(
     const bignum25519 &q1, const bignum25519 &r1
@@ -2729,6 +2744,90 @@ auto bignum25519::barrett_reduce256_modm(
     return reduce256_modm(reduce256_modm(out));
 }  // bignum25519::barrett_reduce256_modm
 
+auto bignum25519::add256_modm(const bignum25519 &x, const bignum25519 &y)
+    -> bignum25519
+{
+    bignum25519 r;
+    uint64_t c = 0;
+    for (size_t i = 0; i < 4; ++i)
+    {
+        c += x[i] + y[i];
+        r[i] = c & 0xffffffffffffff;
+        c >>= 56;
+    }
+    c += x[4] + y[4];
+    r[4] = c;
+    return reduce256_modm(r);
+}  // bignum25519::add256_modm
+
+auto bignum25519::mul256_modm(const bignum25519 &x, const bignum25519 &y)
+    -> bignum25519
+{
+    bignum25519 q1, r1;
+
+    // TODO: Clean up these operations once I get unit tests running. //
+
+    auto c = (uint128_t)x[0] * y[0];
+    auto f = lo128(c);
+    r1[0] = f & 0xffffffffffffff;
+    f = shr128(c, 56);
+
+    c = ((uint128_t)x[0] * y[1]) + f + ((uint128_t)x[1] * y[0]);
+    f = lo128(c);
+    r1[1] = f & 0xffffffffffffff;
+    f = shr128(c, 56);
+
+    c = ((uint128_t)x[0] * y[2]) + f + ((uint128_t)x[2] * y[0]) +
+        ((uint128_t)x[1] * y[1]);
+    f = lo128(c);
+    r1[2] = f & 0xffffffffffffff;
+    f = shr128(c, 56);
+
+    c = ((uint128_t)x[0] * y[3]) + f + ((uint128_t)x[3] * y[0]) +
+        ((uint128_t)x[1] * y[2]) + ((uint128_t)x[2] * y[1]);
+    f = lo128(c);
+    r1[3] = f & 0xffffffffffffff;
+    f = shr128(c, 56);
+
+    c = ((uint128_t)x[0] * y[4]) + f + ((uint128_t)x[4] * y[0]) +
+        ((uint128_t)x[3] * y[1]) + ((uint128_t)x[1] * y[3]) +
+        ((uint128_t)x[2] * y[2]);
+    f = lo128(c);
+    r1[4] = f & 0x0000ffffffffff;
+    q1[0] = (f >> 24) & 0xffffffff;
+    f = shr128(c, 56);
+
+    c = ((uint128_t)x[4] * y[1]) + f + ((uint128_t)x[1] * y[4]) +
+        ((uint128_t)x[2] * y[3]) + ((uint128_t)x[3] * y[2]);
+    f = lo128(c);
+    q1[0] |= (f << 32) & 0xffffffffffffff;
+    q1[1] = (f >> 24) & 0xffffffff;
+    f = shr128(c, 56);
+
+    c = ((uint128_t)x[4] * y[2]) + f + ((uint128_t)x[2] * y[4]) +
+        ((uint128_t)x[3] * y[3]);
+    f = lo128(c);
+    q1[1] |= (f << 32) & 0xffffffffffffff;
+    q1[2] = (f >> 24) & 0xffffffff;
+    f = shr128(c, 56);
+
+    c = ((uint128_t)x[4] * y[3]) + f + ((uint128_t)x[3] * y[4]);
+    f = lo128(c);
+    q1[2] |= (f << 32) & 0xffffffffffffff;
+    q1[3] = (f >> 24) & 0xffffffff;
+    f = shr128(c, 56);
+
+    c = ((uint128_t)x[4] * y[4]) + f;
+    f = lo128(c);
+    q1[3] |= (f << 32) & 0xffffffffffffff;
+    q1[4] = (f >> 24) & 0xffffffff;
+    f = shr128(c, 56);
+
+    q1[4] |= (f << 32);
+
+    return barrett_reduce256_modm(q1, r1);
+}  // bignum25519::mul256_modm
+
 auto bignum25519::expand256_modm(std::span<const uint8_t> in) -> bignum25519
 {
     // The input can technically be any size of bytes but its obviously setup
@@ -2787,7 +2886,18 @@ auto bignum25519::expand_raw256_modm(std::array<uint8_t, 32> const &in)
         ((x[1] >> 48) | (x[2] << 16)) & 0xffffffffffffff,
         ((x[2] >> 40) | (x[3] << 24)) & 0xffffffffffffff,
         ((x[3] >> 32)) & 0x000000ffffffff};
-}
+}  // bignum25519::expand_raw256_modm
+
+auto bignum25519::contract256_modm(bignum25519 const &in)
+    -> std::array<uint8_t, 32>
+{
+    auto out = std::array<uint8_t, 32>();
+    U64TO8_LE(out, in[0] | (in[1] << 56));
+    U64TO8_LE({out.data() + 8, 8}, (in[1] >> 8) | (in[2] << 48));
+    U64TO8_LE({out.data() + 16, 8}, (in[2] >> 16) | (in[3] << 40));
+    U64TO8_LE({out.data() + 24, 8}, (in[3] >> 24) | (in[4] << 32));
+    return out;
+}  // bignum25519::contract256_modm
 
 auto PartialPoint::doubleCompleted() const -> CompletedPoint
 {
@@ -2891,8 +3001,8 @@ auto ExtendedPoint::doublePartial() const -> PartialPoint
 }
 
 // static void
-// ge25519_scalarmult_base_niels(ge25519 *r, const uint8_t basepoint_table[256][96], const bignum256modm s) {
-// 	signed char b[64];
+// ge25519_scalarmult_base_niels(ge25519 *r, const uint8_t
+// basepoint_table[256][96], const bignum256modm s) { 	signed char b[64];
 // 	uint32_t i;
 // 	ge25519_niels t;
 
@@ -2903,10 +3013,10 @@ auto ExtendedPoint::doublePartial() const -> PartialPoint
 // 	curve25519_add_reduce(r->y, t.xaddy, t.ysubx);
 // 	memset(r->z, 0, sizeof(bignum25519));
 // 	curve25519_copy(r->t, t.t2d);
-// 	r->z[0] = 2;	
+// 	r->z[0] = 2;
 // 	for (i = 3; i < 64; i += 2) {
-// 		ge25519_scalarmult_base_choose_niels(&t, basepoint_table, i / 2, b[i]);
-// 		ge25519_nielsadd2(r, &t);
+// 		ge25519_scalarmult_base_choose_niels(&t, basepoint_table, i / 2,
+// b[i]); 		ge25519_nielsadd2(r, &t);
 // 	}
 // 	ge25519_double_partial(r, r);
 // 	ge25519_double_partial(r, r);
@@ -2916,8 +3026,8 @@ auto ExtendedPoint::doublePartial() const -> PartialPoint
 // 	curve25519_mul(t.t2d, t.t2d, ge25519_ecd);
 // 	ge25519_nielsadd2(r, &t);
 // 	for(i = 2; i < 64; i += 2) {
-// 		ge25519_scalarmult_base_choose_niels(&t, basepoint_table, i / 2, b[i]);
-// 		ge25519_nielsadd2(r, &t);
+// 		ge25519_scalarmult_base_choose_niels(&t, basepoint_table, i / 2,
+// b[i]); 		ge25519_nielsadd2(r, &t);
 // 	}
 // }
 
@@ -2969,7 +3079,8 @@ auto ExtendedPoint::multiplyBasepointByScalar(bignum25519 const &s)
 // }; // ExtendedPoint::pack
 
 // This function is largely just used for testing.
-auto curve25519::scalarmult_basepoint(std::array<uint8_t, 32> e) -> std::array<uint8_t, 32>
+auto curve25519::scalarmult_basepoint(std::array<uint8_t, 32> e)
+    -> std::array<uint8_t, 32>
 {
     // clamp
     auto ec = e;

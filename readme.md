@@ -5,7 +5,7 @@
 
 
 An implementation of the Ed25519 elliptic curve digital signature standard in
-modern C++. The library is largley based on the popular Ed25519-donna constant 
+modern C++. The library is largley based on the popular [Ed25519-donna](https://github.com/floodyberry/ed25519-donna) constant 
 time implementation with support for
 [extended private keys](https://raw.githubusercontent.com/input-output-hk/adrestia/master/docs/static/Ed25519_BIP.pdf).
 
@@ -13,7 +13,7 @@ time implementation with support for
 The Viper-Ed25519 library wraps the Ed25519 capability in three classes: `Ed25519PrivateKey`, `Ed25519PublicKey`, and `Ed25519ExtendedPrivateKey`. Examples of how to use these classes are demonstrated below. The examples assume the following to be at the top of the source file.
 
     #include <ed25519-viper/ed25519.hpp>
-    using namespace ed25519; // the ed25519 namespace
+    using namespace ed25519; // the key objects exist within this namespace
 
 ### Generating Keys
 
@@ -39,7 +39,7 @@ The Viper-Ed25519 library wraps the Ed25519 capability in three classes: `Ed2551
     // Create a signature of the message with the key
     auto sig = key.sign(msg);
     // Or
-     auto sig = ext_key.sign(msg);
+    auto sig = ext_key.sign(msg);
 
 ### Verifying Signatures
 
@@ -47,7 +47,7 @@ The Viper-Ed25519 library wraps the Ed25519 capability in three classes: `Ed2551
 
 ### Loading Keys
 
-Existing keys may also be loaded into the constructors of each object a span of bytes.
+Existing keys may also be loaded into the constructors of each object as span of bytes.
 
     // Private key bytes may be loaded from any container type.
     auto pkey_bytes = std::array<uint8_t, 32>{...}; // <- load key bytes here
