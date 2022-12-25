@@ -311,7 +311,7 @@ class ExtendedPoint
         auto ty = this->y() * zi;
         auto r = bignum25519::contract(ty);
         auto parity = bignum25519::contract(tx);
-        r[31] ^= ((parity[0] & 1) << 7);
+        r[31] ^= static_cast<uint8_t>((parity[0] & 1) << 7);
         return r;
     };  // ExtendedPoint::pack
 

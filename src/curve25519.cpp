@@ -139,10 +139,10 @@ constexpr auto contract256_window4_modm(bignum25519 const &in)
     for (i = 0; i < 63; i++)
     {
         r[i] += carry;
-        r[i + 1] += (r[i] >> 4);
+        r[i + 1] += static_cast<int8_t>(r[i] >> 4);
         r[i] &= 15;
-        carry = (r[i] >> 3);
-        r[i] -= (carry << 4);
+        carry = static_cast<int8_t>(r[i] >> 3);
+        r[i] -= static_cast<int8_t>(carry << 4);
     }
     r[63] += carry;
 
@@ -2235,8 +2235,8 @@ auto scalarmult_base_choose_niels(uint32_t pos, int8_t b) -> PackedPoint
     packed[0] = 1;
     packed[32] = 1;
 
-    auto windowb_equal = [](uint32_t b, uint32_t c)
-    { return ((b ^ c) - 1) >> 31; };
+    auto windowb_equal = [](uint32_t x, uint32_t y)
+    { return ((x ^ y) - 1) >> 31; };
 
     for (uint32_t i = 0; i < 8; i++)
         move_conditional_bytes(
