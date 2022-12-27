@@ -6,7 +6,7 @@
 // during build.
 #include "src/curve25519.cpp"
 
-auto test_contract256_modm()
+auto test_contract256_modm() -> void
 {
     constexpr auto bytes_donna = std::array<uint8_t, 32>{
         0x0f, 0x6a, 0xee, 0x6f, 0x51, 0xab, 0xec, 0x4f, 0xb4, 0xd7, 0x7c,
@@ -19,7 +19,7 @@ auto test_contract256_modm()
     TEST_ASSERT_THROW(bytes == bytes_donna)
 }
 
-auto test_contract256_window4_modm()
+auto test_contract256_window4_modm() -> void
 {
     constexpr auto bytes_donna = std::array<int8_t, 64>{
         -1, +1, -6, +7, -2, -1, +0, +7, +1, +5, -5, -5, -3, -1, +0, +5,
@@ -32,6 +32,37 @@ auto test_contract256_window4_modm()
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
         0x0003ac3b70196932, 0x00000000007fae1c};
     constexpr auto res = contract256_window4_modm(in);
+
+    TEST_ASSERT_THROW(res == bytes_donna)
+}
+
+auto test_contract256_slidingwindow_modm() -> void
+{
+    constexpr auto bytes_donna = std::array<int8_t, 256>{
+        +15, +0,  +0, +0,  +0, +0, +0,  +0,  +0,  -11, +0, +0,  +0,  +0,  +0,
+        -3,  +0,  +0, +0,  +0, -1, +0,  +0,  +0,  +0,  +0, +0,  +0,  -9,  +0,
+        +0,  +0,  +0, +9,  +0, +0, +0,  +0,  +13, +0,  +0, +0,  +0,  -11, +0,
+        +0,  +0,  +0, +13, +0, +0, +0,  +0,  -1,  +0,  +0, +0,  +0,  +0,  +0,
+        +5,  +0,  +0, +0,  +0, +0, +13, +0,  +0,  +0,  +0, +15, +0,  +0,  +0,
+        +0,  +13, +0, +0,  +0, +0, +0,  -1,  +0,  +0,  +0, +0,  +5,  +0,  +0,
+        +0,  +0,  +0, -7,  +0, +0, +0,  +0,  -9,  +0,  +0, +0,  +0,  +3,  +0,
+        +0,  +0,  +0, -15, +0, +0, +0,  +0,  +0,  -3,  +0, +0,  +0,  +0,  +0,
+        +7,  +0,  +0, +0,  +0, +0, -15, +0,  +0,  +0,  +0, +9,  +0,  +0,  +0,
+        +0,  +9,  +0, +0,  +0, +0, +0,  -11, +0,  +0,  +0, +0,  -7,  +0,  +0,
+        +0,  +0,  +0, -11, +0, +0, +0,  +0,  +0,  -9,  +0, +0,  +0,  +0,  +0,
+        +0,  +0,  +5, +0,  +0, +0, +0,  -13, +0,  +0,  +0, +0,  -11, +0,  +0,
+        +0,  +0,  +0, -13, +0, +0, +0,  +0,  +0,  +1,  +0, +0,  +0,  +0,  +0,
+        +0,  -9,  +0, +0,  +0, +0, +0,  +15, +0,  +0,  +0, +0,  +0,  +0,  +0,
+        +11, +0,  +0, +0,  +0, +7, +0,  +0,  +0,  +0,  +0, +0,  +0,  +0,  +0,
+        +0,  +7,  +0, +0,  +0, +0, +0,  +0,  -9,  +0,  +0, +0,  +0,  -1,  +0,
+        +0,  +0,  +0, +0,  +0, +0, +0,  +1,  +0,  +0,  +0, +0,  +0,  +0,  +0,
+        +0,
+    };
+
+    constexpr auto in = curve25519::bignum25519{
+        0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
+        0x0003ac3b70196932, 0x00000000007fae1c};
+    constexpr auto res = contract256_slidingwindow_modm(in, 5);
 
     TEST_ASSERT_THROW(res == bytes_donna)
 }
@@ -83,7 +114,7 @@ auto test_bignum25519_expand() -> void
 }
 
 // Not a public function
-auto test_bignum25519_swap_conditional()
+auto test_bignum25519_swap_conditional() -> void
 {
     constexpr auto a_const = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
@@ -108,7 +139,7 @@ auto test_bignum25519_swap_conditional()
     TEST_ASSERT_THROW(a == b_const)
 }
 
-auto test_bignum25519_neg()
+auto test_bignum25519_neg() -> void
 {
     constexpr auto in = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
@@ -119,7 +150,7 @@ auto test_bignum25519_neg()
     TEST_ASSERT_THROW(in.neg() == neg_donna)
 }
 
-auto test_bignum25519_addReduce()
+auto test_bignum25519_addReduce() -> void
 {
     constexpr auto in = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
@@ -130,7 +161,7 @@ auto test_bignum25519_addReduce()
     TEST_ASSERT_THROW(in.addReduce(in) == res_donna)
 }
 
-auto test_bignum25519_squareTimes()
+auto test_bignum25519_squareTimes() -> void
 {
     constexpr auto in = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
@@ -142,7 +173,7 @@ auto test_bignum25519_squareTimes()
     TEST_ASSERT_THROW(in.squareTimes(5) == res_donna)
 }
 
-auto test_bignum25519_pow_two5mtwo0_two250mtwo0()
+auto test_bignum25519_pow_two5mtwo0_two250mtwo0() -> void
 {
     constexpr auto in = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
@@ -153,7 +184,7 @@ auto test_bignum25519_pow_two5mtwo0_two250mtwo0()
     TEST_ASSERT_THROW(in.pow_two5mtwo0_two250mtwo0() == res_donna)
 }
 
-auto test_bignum25519_recip()
+auto test_bignum25519_recip() -> void
 {
     constexpr auto in = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
@@ -164,7 +195,7 @@ auto test_bignum25519_recip()
     TEST_ASSERT_THROW(in.recip() == res_donna)
 }
 
-auto test_bignum25519_add256_modm()
+auto test_bignum25519_add256_modm() -> void
 {
     constexpr auto x = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
@@ -179,7 +210,7 @@ auto test_bignum25519_add256_modm()
     TEST_ASSERT_THROW(curve25519::bignum25519::add256_modm(x, y) == r)
 }
 
-auto test_bignum25519_mul256_modm()
+auto test_bignum25519_mul256_modm() -> void
 {
     constexpr auto x = curve25519::bignum25519{
         0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
@@ -194,10 +225,23 @@ auto test_bignum25519_mul256_modm()
     TEST_ASSERT_THROW(curve25519::bignum25519::mul256_modm(x, y) == r)
 }
 
+auto test_bignum25519_pow_two252m3() -> void
+{
+    // bignum25519::pow_two252m3
+    constexpr auto in = curve25519::bignum25519{
+        0x00ecab516fee6a0f, 0x00115b227cd7b44f, 0x007b69c5494446f3,
+        0x0003ac3b70196932, 0x00000000007fae1c};
+    constexpr auto res_donna = curve25519::bignum25519{
+        0x000682d9e2b111e1, 0x00007e8974ac1d3f, 0x0000797621ab59db,
+        0x0002854d06b63c40, 0x0003e9d41c005987};
+    TEST_ASSERT_THROW(in.pow_two252m3() == res_donna)
+}
+
 auto main() -> int
 {
     test_contract256_modm();
     test_contract256_window4_modm();
+    test_contract256_slidingwindow_modm();
     test_expand256_modm();
     test_bignum25519_expand();
     test_bignum25519_swap_conditional();
@@ -208,5 +252,6 @@ auto main() -> int
     test_bignum25519_recip();
     test_bignum25519_add256_modm();
     test_bignum25519_mul256_modm();
+    test_bignum25519_pow_two252m3();
     return 0;
 }

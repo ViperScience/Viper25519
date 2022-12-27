@@ -30,6 +30,7 @@ namespace curve25519
 
 struct bignum25519 : public std::array<uint64_t, 5>
 {
+    // move these out of the bignum25519 struct
     static constexpr auto ecd() -> bignum25519
     {
         return {
@@ -88,6 +89,8 @@ struct bignum25519 : public std::array<uint64_t, 5>
 
     auto squareTimes(uint64_t count) const -> bignum25519;
 
+    auto pow_two252m3() const -> bignum25519;
+
     // In:  b =   2^5 - 2^0
     // Out: b = 2^250 - 2^0
     auto pow_two5mtwo0_two250mtwo0() const -> bignum25519;
@@ -137,16 +140,29 @@ struct bignum25519 : public std::array<uint64_t, 5>
 // satisfying -x^2 + y^2 = 1 + d x^2y^2 where d = -121665/121666.
 class CompletedPoint;
 class ExtendedPoint;
-class PackedPoint;
+class PrecomputedPoint;
 
 /// @brief Representation of a point on the Ed25519 curve in partial form.
+/// The partial point is stored as a three element array of bignum25519 values:
+/// (X, Y, Z) satisfying x=X/Z, y=Y/Z.
 class PartialPoint
 {
   private:
     std::array<bignum25519, 3> data_{};
 
   public:
-    PartialPoint(std::array<bignum25519, 3> a) : data_{std::move(a)} {}
+    [[nodiscard]] PartialPoint()
+        : PartialPoint({bignum25519{}, bignum25519{}, bignum25519{}})
+    {
+    }
+    [[nodiscard]] explicit PartialPoint(std::array<bignum25519, 3> a)
+        : data_{std::move(a)}
+    {
+    }
+
+    // Overloading [] operator to access elements in array style
+    auto operator[](size_t index) const -> bignum25519;
+
     auto x() const -> bignum25519 { return data_[0]; }
     auto y() const -> bignum25519 { return data_[1]; }
     auto z() const -> bignum25519 { return data_[2]; }
@@ -159,19 +175,32 @@ class PartialPoint
 
 };  // class PartialPoint
 
-/// @brief Representation of a point on the Ed25519 curve in packed form.
-/// The point is stored as a three element array of bignum25519 values:
-/// (X, Y, Z) satisfying x=X/Z, y=Y/Z.
-class PackedPoint
+/// @brief Representation of a point on the Ed25519 curve in precomputed form.
+/// The point is stored as a three element array of bignum25519 values. The
+/// values are stored in precomputed from in order to save some computations
+/// later on prior to being converted back to the final point.
+class PrecomputedPoint
 {
   private:
     std::array<bignum25519, 3> data_{};
 
   public:
-    PackedPoint(std::array<bignum25519, 3> a) : data_{std::move(a)} {}
+    [[nodiscard]] PrecomputedPoint()
+        : PrecomputedPoint({bignum25519{}, bignum25519{}, bignum25519{}})
+    {
+    }
+    [[nodiscard]] explicit PrecomputedPoint(std::array<bignum25519, 3> a)
+        : data_{std::move(a)}
+    {
+    }
+
     auto xaddy() const -> bignum25519 { return data_[0]; }
     auto ysubx() const -> bignum25519 { return data_[1]; }
     auto t2d() const -> bignum25519 { return data_[2]; }
+
+    // Overloading [] operator to access elements in array style
+    auto operator[](size_t index) const -> bignum25519;
+
     auto set_xaddy(bignum25519 &&nxaddy) -> void
     {
         data_[0] = std::forward<bignum25519>(nxaddy);
@@ -186,6 +215,54 @@ class PackedPoint
     }
 };  // class PackedPoint
 
+/// @brief Representation of a point on the Ed25519 curve in precomputed form.
+/// The point is stored as a three element array of bignum25519 values. The
+/// values are stored in precomputed from in order to save some computations
+/// later on prior to being converted back to the final point.
+class ExtendedPrecomputedPoint
+{
+  private:
+    std::array<bignum25519, 4> data_{};
+
+  public:
+    [[nodiscard]] ExtendedPrecomputedPoint()
+        : ExtendedPrecomputedPoint(
+              {bignum25519{}, bignum25519{}, bignum25519{}, bignum25519{}}
+          )
+    {
+    }
+    [[nodiscard]] explicit ExtendedPrecomputedPoint(std::array<bignum25519, 4> a
+    )
+        : data_{std::move(a)}
+    {
+    }
+
+    auto xaddy() const -> bignum25519 { return data_[0]; }
+    auto ysubx() const -> bignum25519 { return data_[1]; }
+    auto z() const -> bignum25519 { return data_[2]; }
+    auto t2d() const -> bignum25519 { return data_[3]; }
+
+    // Overloading [] operator to access elements in array style
+    auto operator[](size_t index) const -> bignum25519;
+
+    auto set_xaddy(bignum25519 &&nxaddy) -> void
+    {
+        data_[0] = std::forward<bignum25519>(nxaddy);
+    }
+    auto set_ysubx(bignum25519 &&nysubx) -> void
+    {
+        data_[1] = std::forward<bignum25519>(nysubx);
+    }
+    auto set_z(bignum25519 &&nz) -> void
+    {
+        data_[2] = std::forward<bignum25519>(nz);
+    }
+    auto set_t2d(bignum25519 &&nt2d) -> void
+    {
+        data_[3] = std::forward<bignum25519>(nt2d);
+    }
+};
+
 /// @brief Representation of a point on the Ed25519 curve.
 /// The point is stored as a four element array of bignum25519 values:
 /// ((X, Y), (Z, T)) satisfying x=X/Z, y=Y/T.
@@ -195,6 +272,12 @@ class CompletedPoint
     std::array<bignum25519, 4> data_{};
 
   public:
+    [[nodiscard]] CompletedPoint()
+        : CompletedPoint(
+              {bignum25519{}, bignum25519{}, bignum25519{}, bignum25519{}}
+          )
+    {
+    }
     [[nodiscard]] explicit CompletedPoint(std::array<bignum25519, 4> a)
         : data_{std::move(a)}
     {
@@ -204,6 +287,9 @@ class CompletedPoint
     [[nodiscard]] auto y() const -> bignum25519 { return data_[1]; }
     [[nodiscard]] auto z() const -> bignum25519 { return data_[2]; }
     [[nodiscard]] auto t() const -> bignum25519 { return data_[3]; }
+
+    // Overloading [] operator to access elements in array style
+    auto operator[](size_t index) const -> bignum25519;
 
     auto set_x(bignum25519 &&nx) -> void
     {
@@ -237,6 +323,12 @@ class ExtendedPoint
     std::array<bignum25519, 4> data_{};
 
   public:
+    [[nodiscard]] ExtendedPoint()
+        : ExtendedPoint(
+              {bignum25519{}, bignum25519{}, bignum25519{}, bignum25519{}}
+          )
+    {
+    }
     [[nodiscard]] explicit ExtendedPoint(std::array<bignum25519, 4> a)
         : data_{std::move(a)}
     {
@@ -264,6 +356,9 @@ class ExtendedPoint
         data_[3] = std::forward<bignum25519>(nt);
     }
 
+    // Overloading [] operator to access elements in array style
+    auto operator[](size_t index) const -> bignum25519;
+
     [[nodiscard]] static auto basepoint() -> ExtendedPoint
     {
         auto x = bignum25519{
@@ -281,39 +376,47 @@ class ExtendedPoint
         return ExtendedPoint({x, y, z, t});
     }  // ExtendedPoint::basepoint
 
-    [[nodiscard]] auto add(PackedPoint const &q) const -> ExtendedPoint;
+    [[nodiscard]] auto add(PrecomputedPoint const &q) const -> ExtendedPoint;
 
-    [[nodiscard]] auto add2(PackedPoint const &q) -> ExtendedPoint &;
+    [[nodiscard]] auto add(ExtendedPrecomputedPoint const &q) const
+        -> ExtendedPrecomputedPoint;
 
-    auto operator+(PackedPoint const &rhs) const -> ExtendedPoint;
-    // {
-    //     return this->add(rhs);
-    // } // operator +
+    [[nodiscard]] auto add(
+        ExtendedPrecomputedPoint const &q, uint8_t const signbit
+    ) const -> CompletedPoint;
 
-    auto operator+=(PackedPoint const &rhs) -> ExtendedPoint &;
-    // {
-    //     return this->add2(rhs);
-    // } // operator +=
+    [[nodiscard]] auto add(PrecomputedPoint const &q, uint8_t const signbit)
+        const -> CompletedPoint;
+
+    [[nodiscard]] auto add2(PrecomputedPoint const &q) -> ExtendedPoint &;
+
+    auto operator+(PrecomputedPoint const &rhs) const -> ExtendedPoint;
+
+    auto operator+=(PrecomputedPoint const &rhs) -> ExtendedPoint &;
+
+    auto toCompleted() const -> CompletedPoint;
+
+    auto toPrecomputedExtendedPoint() const -> ExtendedPrecomputedPoint;
 
     auto doubleCompleted() const -> CompletedPoint;
 
     auto doublePartial() const -> PartialPoint;
+
+    auto doubleExtended() const -> ExtendedPoint;
+
+    /// @brief Computes [s1]p1 + [s2]basepoint
+    auto doubleScalarMultiple(bignum25519 const &s1, bignum25519 const &s2)
+        const -> ExtendedPoint;
 
     /// @brief Computes [s]B
     /// Compute [s]B where B is the curve 25519 basepoint and [s] is a scalar.
     [[nodiscard]] static auto multiplyBasepointByScalar(bignum25519 const &s)
         -> ExtendedPoint;
 
-    auto pack() const -> std::array<uint8_t, 32>
-    {
-        auto zi = this->z().recip();
-        auto tx = this->x() * zi;
-        auto ty = this->y() * zi;
-        auto r = bignum25519::contract(ty);
-        auto parity = bignum25519::contract(tx);
-        r[31] ^= static_cast<uint8_t>((parity[0] & 1) << 7);
-        return r;
-    };  // ExtendedPoint::pack
+    auto pack() const -> std::array<uint8_t, 32>;
+
+    [[nodiscard]] static auto unpack(std::span<const uint8_t> p)
+        -> ExtendedPoint;
 
 };  // class ExtendedPoint
 

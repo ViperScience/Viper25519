@@ -22,6 +22,7 @@
 #include <bit>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 #if defined(_MSC_VER)
 #include <boost/multiprecision/cpp_int.hpp>
 typedef boost::multiprecision::int128_t uint128_t;
@@ -31,6 +32,9 @@ typedef __uint128_t uint128_t;
 
 // Public Viper Ed25519 Headers
 #include <ed25519-viper/curve25519.hpp>
+
+// Private Viper Ed25519 Headers
+#include "utils.hpp"
 
 using namespace curve25519;
 
@@ -147,7 +151,61 @@ constexpr auto contract256_window4_modm(bignum25519 const &in)
     r[63] += carry;
 
     return r;
-}
+}  // contract256_window4_modm
+
+constexpr auto contract256_slidingwindow_modm(
+    const bignum25519 &s, int windowsize
+) -> std::array<int8_t, 256>
+{
+    auto r = std::array<int8_t, 256>();
+    signed char *bits = r.data();
+
+    // first put the binary expansion into r
+    uint64_t v;
+    for (auto i = 0UL; i < 4; i++)
+    {
+        v = s[i];
+        for (auto j = 0UL; j < 56; j++, v >>= 1) *bits++ = (v & 1);
+    }
+    v = s[4];
+    for (auto j = 0UL; j < 32; j++, v >>= 1) *bits++ = (v & 1);
+
+    // Making it sliding window
+    int m = (1 << (windowsize - 1)) - 1;
+    unsigned int soplen = 256;
+    for (auto j = 0UL; j < soplen; j++)
+    {
+        if (!r[j]) continue;
+
+        for (auto b = 1UL; (b < (soplen - j)) && (b <= 6); b++)
+        {
+            if ((r[j] + (r[j + b] << b)) <= m)
+            {
+                r[j] += static_cast<int8_t>(r[j + b] << b);
+                r[j + b] = 0;
+            }
+            else if ((r[j] - (r[j + b] << b)) >= -m)
+            {
+                r[j] -= static_cast<int8_t>(r[j + b] << b);
+                for (auto k = j + b; k < soplen; k++)
+                {
+                    if (!r[k])
+                    {
+                        r[k] = 1;
+                        break;
+                    }
+                    r[k] = 0;
+                }
+            }
+            else if (r[j + b])
+            {
+                break;
+            }
+        }
+    }
+
+    return r;
+}  // contract256_slidingwindow_modm
 
 // Define 2x multiple of p. (p = 2^255 - 19)
 constexpr auto px2 = bignum25519{
@@ -2223,7 +2281,7 @@ constexpr uint8_t basepoint_multiples_packed[256][96] = {
      0x7e, 0x54, 0x19, 0x7f, 0x0f, 0x8e, 0x84, 0xeb, 0xb9, 0x97, 0xa4, 0x65,
      0xd0, 0xa1, 0x03, 0x25, 0x5f, 0x89, 0xdf, 0x91, 0x11, 0x91, 0xef, 0x0f}};
 
-auto scalarmult_base_choose_niels(uint32_t pos, int8_t b) -> PackedPoint
+auto scalarmult_base_choose_niels(uint32_t pos, int8_t b) -> PrecomputedPoint
 {
     auto sign = (uint32_t)((uint8_t)b >> 7);
     auto mask = ~(sign - 1);
@@ -2254,8 +2312,362 @@ auto scalarmult_base_choose_niels(uint32_t pos, int8_t b) -> PackedPoint
     auto neg = t2d.neg();
     swap_conditional(t2d, neg, sign);
 
-    return PackedPoint({xaddy, ysubx, t2d});
+    return PrecomputedPoint({xaddy, ysubx, t2d});
 }  // ExtendedPoint::scalarmult_base_choose_niels
+
+const auto ge25519_niels_sliding_multiples = std::array<PrecomputedPoint, 32>{
+    PrecomputedPoint(
+        {bignum25519{
+             0x000493c6f58c3b85, 0x0000df7181c325f7, 0x0000f50b0b3e4cb7,
+             0x0005329385a44c32, 0x00007cf9d3a33d4b},
+         bignum25519{
+             0x00003905d740913e, 0x0000ba2817d673a2, 0x00023e2827f4e67c,
+             0x000133d2e0c21a34, 0x00044fd2f9298f81},
+         bignum25519{
+             0x00011205877aaa68, 0x000479955893d579, 0x00050d66309b67a0,
+             0x0002d42d0dbee5ee, 0x0006f117b689f0c6}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0005b0a84cee9730, 0x00061d10c97155e4, 0x0004059cc8096a10,
+             0x00047a608da8014f, 0x0007a164e1b9a80f},
+         bignum25519{
+             0x00011fe8a4fcd265, 0x0007bcb8374faacc, 0x00052f5af4ef4d4f,
+             0x0005314098f98d10, 0x0002ab91587555bd},
+         bignum25519{
+             0x0006933f0dd0d889, 0x00044386bb4c4295, 0x0003cb6d3162508c,
+             0x00026368b872a2c6, 0x0005a2826af12b9b}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0002bc4408a5bb33, 0x000078ebdda05442, 0x0002ffb112354123,
+             0x000375ee8df5862d, 0x0002945ccf146e20},
+         bignum25519{
+             0x000182c3a447d6ba, 0x00022964e536eff2, 0x000192821f540053,
+             0x0002f9f19e788e5c, 0x000154a7e73eb1b5},
+         bignum25519{
+             0x0003dbf1812a8285, 0x0000fa17ba3f9797, 0x0006f69cb49c3820,
+             0x00034d5a0db3858d, 0x00043aabe696b3bb}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x00025cd0944ea3bf, 0x00075673b81a4d63, 0x000150b925d1c0d4,
+             0x00013f38d9294114, 0x000461bea69283c9},
+         bignum25519{
+             0x00072c9aaa3221b1, 0x000267774474f74d, 0x000064b0e9b28085,
+             0x0003f04ef53b27c9, 0x0001d6edd5d2e531},
+         bignum25519{
+             0x00036dc801b8b3a2, 0x0000e0a7d4935e30, 0x0001deb7cecc0d7d,
+             0x000053a94e20dd2c, 0x0007a9fbb1c6a0f9}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0006678aa6a8632f, 0x0005ea3788d8b365, 0x00021bd6d6994279,
+             0x0007ace75919e4e3, 0x00034b9ed338add7},
+         bignum25519{
+             0x0006217e039d8064, 0x0006dea408337e6d, 0x00057ac112628206,
+             0x000647cb65e30473, 0x00049c05a51fadc9},
+         bignum25519{
+             0x0004e8bf9045af1b, 0x000514e33a45e0d6, 0x0007533c5b8bfe0f,
+             0x000583557b7e14c9, 0x00073c172021b008}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x000700848a802ade, 0x0001e04605c4e5f7, 0x0005c0d01b9767fb,
+             0x0007d7889f42388b, 0x0004275aae2546d8},
+         bignum25519{
+             0x00075b0249864348, 0x00052ee11070262b, 0x000237ae54fb5acd,
+             0x0003bfd1d03aaab5, 0x00018ab598029d5c},
+         bignum25519{
+             0x00032cc5fd6089e9, 0x000426505c949b05, 0x00046a18880c7ad2,
+             0x0004a4221888ccda, 0x0003dc65522b53df}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0000c222a2007f6d, 0x000356b79bdb77ee, 0x00041ee81efe12ce,
+             0x000120a9bd07097d, 0x000234fd7eec346f},
+         bignum25519{
+             0x0007013b327fbf93, 0x0001336eeded6a0d, 0x0002b565a2bbf3af,
+             0x000253ce89591955, 0x0000267882d17602},
+         bignum25519{
+             0x0000a119732ea378, 0x00063bf1ba8e2a6c, 0x00069f94cc90df9a,
+             0x000431d1779bfc48, 0x000497ba6fdaa097}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0006cc0313cfeaa0, 0x0001a313848da499, 0x0007cb534219230a,
+             0x00039596dedefd60, 0x00061e22917f12de},
+         bignum25519{
+             0x0003cd86468ccf0b, 0x00048553221ac081, 0x0006c9464b4e0a6e,
+             0x00075fba84180403, 0x00043b5cd4218d05},
+         bignum25519{
+             0x0002762f9bd0b516, 0x0001c6e7fbddcbb3, 0x00075909c3ace2bd,
+             0x00042101972d3ec9, 0x000511d61210ae4d}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x000676ef950e9d81, 0x0001b81ae089f258, 0x00063c4922951883,
+             0x0002f1d54d9b3237, 0x0006d325924ddb85},
+         bignum25519{
+             0x000386484420de87, 0x0002d6b25db68102, 0x000650b4962873c0,
+             0x0004081cfd271394, 0x00071a7fe6fe2482},
+         bignum25519{
+             0x000182b8a5c8c854, 0x00073fcbe5406d8e, 0x0005de3430cff451,
+             0x000554b967ac8c41, 0x0004746c4b6559ee}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x00077b3c6dc69a2b, 0x0004edf13ec2fa6e, 0x0004e85ad77beac8,
+             0x0007dba2b28e7bda, 0x0005c9a51de34fe9},
+         bignum25519{
+             0x000546c864741147, 0x0003a1df99092690, 0x0001ca8cc9f4d6bb,
+             0x00036b7fc9cd3b03, 0x000219663497db5e},
+         bignum25519{
+             0x0000f1cf79f10e67, 0x00043ccb0a2b7ea2, 0x00005089dfff776a,
+             0x0001dd84e1d38b88, 0x0004804503c60822}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x00049ed02ca37fc7, 0x000474c2b5957884, 0x0005b8388e816683,
+             0x0004b6c454b76be4, 0x000553398a516506},
+         bignum25519{
+             0x000021d23a36d175, 0x0004fd3373c6476d, 0x00020e291eeed02a,
+             0x00062f2ecf2e7210, 0x000771e098858de4},
+         bignum25519{
+             0x0002f5d278451edf, 0x000730b133997342, 0x0006965420eb6975,
+             0x000308a3bfa516cf, 0x0005a5ed1d68ff5a}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0005122afe150e83, 0x0004afc966bb0232, 0x0001c478833c8268,
+             0x00017839c3fc148f, 0x00044acb897d8bf9},
+         bignum25519{
+             0x0005e0c558527359, 0x0003395b73afd75c, 0x000072afa4e4b970,
+             0x00062214329e0f6d, 0x000019b60135fefd},
+         bignum25519{
+             0x000068145e134b83, 0x0001e4860982c3cc, 0x000068fb5f13d799,
+             0x0007c9283744547e, 0x000150c49fde6ad2}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0003f29509471138, 0x000729eeb4ca31cf, 0x00069c22b575bfbc,
+             0x0004910857bce212, 0x0006b2b5a075bb99},
+         bignum25519{
+             0x0001863c9cdca868, 0x0003770e295a1709, 0x0000d85a3720fd13,
+             0x0005e0ff1f71ab06, 0x00078a6d7791e05f},
+         bignum25519{
+             0x0007704b47a0b976, 0x0002ae82e91aab17, 0x00050bd6429806cd,
+             0x00068055158fd8ea, 0x000725c7ffc4ad55}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x00026715d1cf99b2, 0x0002205441a69c88, 0x000448427dcd4b54,
+             0x0001d191e88abdc5, 0x000794cc9277cb1f},
+         bignum25519{
+             0x00002bf71cd098c0, 0x00049dabcc6cd230, 0x00040a6533f905b2,
+             0x000573efac2eb8a4, 0x0004cd54625f855f},
+         bignum25519{
+             0x0006c426c2ac5053, 0x0005a65ece4b095e, 0x0000c44086f26bb6,
+             0x0007429568197885, 0x0007008357b6fcc8}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0000672738773f01, 0x000752bf799f6171, 0x0006b4a6dae33323,
+             0x0007b54696ead1dc, 0x00006ef7e9851ad0},
+         bignum25519{
+             0x00039fbb82584a34, 0x00047a568f257a03, 0x00014d88091ead91,
+             0x0002145b18b1ce24, 0x00013a92a3669d6d},
+         bignum25519{
+             0x0003771cc0577de5, 0x0003ca06bb8b9952, 0x00000b81c5d50390,
+             0x00043512340780ec, 0x0003c296ddf8a2af}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x000515f9d914a713, 0x00073191ff2255d5, 0x00054f5cc2a4bdef,
+             0x0003dd57fc118bcf, 0x0007a99d393490c7},
+         bignum25519{
+             0x00034d2ebb1f2541, 0x0000e815b723ff9d, 0x000286b416e25443,
+             0x0000bdfe38d1bee8, 0x0000a892c7007477},
+         bignum25519{
+             0x0002ed2436bda3e8, 0x00002afd00f291ea, 0x0000be7381dea321,
+             0x0003e952d4b2b193, 0x000286762d28302f}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x000036093ce35b25, 0x0003b64d7552e9cf, 0x00071ee0fe0b8460,
+             0x00069d0660c969e5, 0x00032f1da046a9d9},
+         bignum25519{
+             0x00058e2bce2ef5bd, 0x00068ce8f78c6f8a, 0x0006ee26e39261b2,
+             0x00033d0aa50bcf9d, 0x0007686f2a3d6f17},
+         bignum25519{
+             0x000512a66d597c6a, 0x0000609a70a57551, 0x000026c08a3c464c,
+             0x0004531fc8ee39e1, 0x000561305f8a9ad2}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0004978dec92aed1, 0x000069adae7ca201, 0x00011ee923290f55,
+             0x00069641898d916c, 0x00000aaec53e35d4},
+         bignum25519{
+             0x0002cc28e7b0c0d5, 0x00077b60eb8a6ce4, 0x0004042985c277a6,
+             0x000636657b46d3eb, 0x000030a1aef2c57c},
+         bignum25519{
+             0x0001f773003ad2aa, 0x000005642cc10f76, 0x00003b48f82cfca6,
+             0x0002403c10ee4329, 0x00020be9c1c24065}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x000387d8249673a6, 0x0005bea8dc927c2a, 0x0005bd8ed5650ef0,
+             0x0000ef0e3fcd40e1, 0x000750ab3361f0ac},
+         bignum25519{
+             0x0000e44ae2025e60, 0x0005f97b9727041c, 0x0005683472c0ecec,
+             0x000188882eb1ce7c, 0x00069764c545067e},
+         bignum25519{
+             0x00023283a2f81037, 0x000477aff97e23d1, 0x0000b8958dbcbb68,
+             0x0000205b97e8add6, 0x00054f96b3fb7075}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0005f20429669279, 0x00008fafae4941f5, 0x00015d83c4eb7688,
+             0x0001cf379eca4146, 0x0003d7fe9c52bb75},
+         bignum25519{
+             0x0005afc616b11ecd, 0x00039f4aec8f22ef, 0x0003b39e1625d92e,
+             0x0005f85bd4508873, 0x00078e6839fbe85d},
+         bignum25519{
+             0x00032df737b8856b, 0x0000608342f14e06, 0x0003967889d74175,
+             0x0001211907fba550, 0x00070f268f350088}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x00064583b1805f47, 0x00022c1baf832cd0, 0x000132c01bd4d717,
+             0x0004ecf4c3a75b8f, 0x0007c0d345cfad88},
+         bignum25519{
+             0x0004112070dcf355, 0x0007dcff9c22e464, 0x00054ada60e03325,
+             0x00025cd98eef769a, 0x000404e56c039b8c},
+         bignum25519{
+             0x00071f4b8c78338a, 0x00062cfc16bc2b23, 0x00017cf51280d9aa,
+             0x0003bbae5e20a95a, 0x00020d754762aaec}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0007c36fc73bb758, 0x0004a6c797734bd1, 0x0000ef248ab3950e,
+             0x00063154c9a53ec8, 0x0002b8f1e46f3cee},
+         bignum25519{
+             0x0004feb135b9f543, 0x00063bd192ad93ae, 0x00044e2ea612cdf7,
+             0x000670f4991583ab, 0x00038b8ada8790b4},
+         bignum25519{
+             0x00004a9cdf51f95d, 0x0005d963fbd596b8, 0x00022d9b68ace54a,
+             0x0004a98e8836c599, 0x000049aeb32ceba1}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x00007d0b75fc7931, 0x00016f4ce4ba754a, 0x0005ace4c03fbe49,
+             0x00027e0ec12a159c, 0x000795ee17530f67},
+         bignum25519{
+             0x00067d3c63dcfe7e, 0x000112f0adc81aee, 0x00053df04c827165,
+             0x0002fe5b33b430f0, 0x00051c665e0c8d62},
+         bignum25519{
+             0x00025b0a52ecbd81, 0x0005dc0695fce4a9, 0x0003b928c575047d,
+             0x00023bf3512686e5, 0x0006cd19bf49dc54}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0006612165afc386, 0x0001171aa36203ff, 0x0002642ea820a8aa,
+             0x0001f3bb7b313f10, 0x0005e01b3a7429e4},
+         bignum25519{
+             0x0007619052179ca3, 0x0000c16593f0afd0, 0x000265c4795c7428,
+             0x00031c40515d5442, 0x0007520f3db40b2e},
+         bignum25519{
+             0x00050be3d39357a1, 0x0003ab33d294a7b6, 0x0004c479ba59edb3,
+             0x0004c30d184d326f, 0x00071092c9ccef3c}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0003d8ac74051dcf, 0x00010ab6f543d0ad, 0x0005d0f3ac0fda90,
+             0x0005ef1d2573e5e4, 0x0004173a5bb7137a},
+         bignum25519{
+             0x0000523f0364918c, 0x000687f56d638a7b, 0x00020796928ad013,
+             0x0005d38405a54f33, 0x0000ea15b03d0257},
+         bignum25519{
+             0x00056e31f0f9218a, 0x0005635f88e102f8, 0x0002cbc5d969a5b8,
+             0x000533fbc98b347a, 0x0005fc565614a4e3}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0002e1e67790988e, 0x0001e38b9ae44912, 0x000648fbb4075654,
+             0x00028df1d840cd72, 0x0003214c7409d466},
+         bignum25519{
+             0x0006570dc46d7ae5, 0x00018a9f1b91e26d, 0x000436b6183f42ab,
+             0x000550acaa4f8198, 0x00062711c414c454},
+         bignum25519{
+             0x0001827406651770, 0x0004d144f286c265, 0x00017488f0ee9281,
+             0x00019e6cdb5c760c, 0x0005bea94073ecb8}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0000ce63f343d2f8, 0x0001e0a87d1e368e, 0x000045edbc019eea,
+             0x0006979aed28d0d1, 0x0004ad0785944f1b},
+         bignum25519{
+             0x0005bf0912c89be4, 0x00062fadcaf38c83, 0x00025ec196b3ce2c,
+             0x00077655ff4f017b, 0x0003aacd5c148f61},
+         bignum25519{
+             0x00063b34c3318301, 0x0000e0e62d04d0b1, 0x000676a233726701,
+             0x00029e9a042d9769, 0x0003aff0cb1d9028}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0006430bf4c53505, 0x000264c3e4507244, 0x00074c9f19a39270,
+             0x00073f84f799bc47, 0x0002ccf9f732bd99},
+         bignum25519{
+             0x0005c7eb3a20405e, 0x0005fdb5aad930f8, 0x0004a757e63b8c47,
+             0x00028e9492972456, 0x000110e7e86f4cd2},
+         bignum25519{
+             0x0000d89ed603f5e4, 0x00051e1604018af8, 0x0000b8eedc4a2218,
+             0x00051ba98b9384d0, 0x00005c557e0b9693}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0006bbb089c20eb0, 0x0006df41fb0b9eee, 0x00051087ed87e16f,
+             0x000102db5c9fa731, 0x000289fef0841861},
+         bignum25519{
+             0x0001ce311fc97e6f, 0x0006023f3fb5db1f, 0x0007b49775e8fc98,
+             0x0003ad70adbf5045, 0x0006e154c178fe98},
+         bignum25519{
+             0x00016336fed69abf, 0x0004f066b929f9ec, 0x0004e9ff9e6c5b93,
+             0x00018c89bc4bb2ba, 0x0006afbf642a95ca}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x00055070f913a8cc, 0x000765619eac2bbc, 0x0003ab5225f47459,
+             0x00076ced14ab5b48, 0x00012c093cedb801},
+         bignum25519{
+             0x0000de0c62f5d2c1, 0x00049601cf734fb5, 0x0006b5c38263f0f6,
+             0x0004623ef5b56d06, 0x0000db4b851b9503},
+         bignum25519{
+             0x00047f9308b8190f, 0x000414235c621f82, 0x00031f5ff41a5a76,
+             0x0006736773aab96d, 0x00033aa8799c6635}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x0000f588fc156cb1, 0x000363414da4f069, 0x0007296ad9b68aea,
+             0x0004d3711316ae43, 0x000212cd0c1c8d58},
+         bignum25519{
+             0x0007f51ebd085cf2, 0x00012cfa67e3f5e1, 0x0001800cf1e3d46a,
+             0x00054337615ff0a8, 0x000233c6f29e8e21},
+         bignum25519{
+             0x0004d5107f18c781, 0x00064a4fd3a51a5e, 0x0004f4cd0448bb37,
+             0x000671d38543151e, 0x0001db7778911914}}
+    ),
+    PrecomputedPoint(
+        {bignum25519{
+             0x00014769dd701ab6, 0x00028339f1b4b667, 0x0004ab214b8ae37b,
+             0x00025f0aefa0b0fe, 0x0007ae2ca8a017d2},
+         bignum25519{
+             0x000352397c6bc26f, 0x00018a7aa0227bbe, 0x0005e68cc1ea5f8b,
+             0x0006fe3e3a7a1d5f, 0x00031ad97ad26e2a},
+         bignum25519{
+             0x000017ed0920b962, 0x000187e33b53b6fd, 0x00055829907a1463,
+             0x000641f248e0a792, 0x0001ed1fc53a6622}}
+    )};
 
 }  // unnamed namespace
 
@@ -2515,6 +2927,19 @@ auto bignum25519::squareTimes(uint64_t count) const -> bignum25519
     } while (--count);
     return out;
 }  // Curve25519::square_times
+
+auto bignum25519::pow_two252m3() const -> bignum25519
+{
+    auto c = this->squareTimes(1);      // c = 2
+    auto t0 = c.squareTimes(2);         // t0 = 8
+    auto b = t0 * (*this);              // b = 9
+    c = b * c;                          // c = 11
+    t0 = c.squareTimes(1);              // 22
+    b = t0 * b;                         // 2^5 - 2^0 = 31
+    b = b.pow_two5mtwo0_two250mtwo0();  // 2^250 - 2^0
+    b = b.squareTimes(2);               // 2^252 - 2^2
+    return (b * (*this));               // 2^252 - 3
+}  // bignum25519::pow_two252m3
 
 // In:  b =   2^5 - 2^0
 // Out: b = 2^250 - 2^0
@@ -2899,6 +3324,12 @@ auto bignum25519::contract256_modm(bignum25519 const &in)
     return out;
 }  // bignum25519::contract256_modm
 
+auto PartialPoint::operator[](size_t index) const -> bignum25519
+{
+    if (index > 2) throw std::out_of_range("Index out of range.");
+    return data_[index];
+}  // ExtendedPoint::operator[]
+
 auto PartialPoint::doubleCompleted() const -> CompletedPoint
 {
     auto a = this->x().square();
@@ -2912,17 +3343,35 @@ auto PartialPoint::doubleCompleted() const -> CompletedPoint
     rx = rx.subAfterBasic(ry);
     auto rt = c.subAfterBasic(rz);
     return CompletedPoint({rx, ry, rz, rt});
-}
+}  // PartialPoint::doubleCompleted
 
 auto PartialPoint::doubleExtended() const -> ExtendedPoint
 {
     return this->doubleCompleted().toExtended();
-}
+}  // PartialPoint::doubleExtended
 
 auto PartialPoint::doublePartial() const -> PartialPoint
 {
     return this->doubleCompleted().toPartial();
-}
+}  // PartialPoint::doublePartial
+
+auto PrecomputedPoint::operator[](size_t index) const -> bignum25519
+{
+    if (index > 2) throw std::out_of_range("Index out of range.");
+    return data_[index];
+}  // ExtendedPoint::operator[]
+
+auto ExtendedPrecomputedPoint::operator[](size_t index) const -> bignum25519
+{
+    if (index > 3) throw std::out_of_range("Index out of range.");
+    return data_[index];
+}  // PrecomputedExtendedPoint::operator[]
+
+auto CompletedPoint::operator[](size_t index) const -> bignum25519
+{
+    if (index > 3) throw std::out_of_range("Index out of range.");
+    return data_[index];
+}  // ExtendedPoint::operator[]
 
 auto CompletedPoint::toPartial() const -> PartialPoint
 {
@@ -2930,7 +3379,7 @@ auto CompletedPoint::toPartial() const -> PartialPoint
     auto ry = this->y() * this->z();
     auto rz = this->z() * this->t();
     return PartialPoint({rx, ry, rz});
-}
+}  // CompletedPoint::toPartial
 
 auto CompletedPoint::toExtended() const -> ExtendedPoint
 {
@@ -2939,9 +3388,15 @@ auto CompletedPoint::toExtended() const -> ExtendedPoint
     auto rz = this->z() * this->t();
     auto rt = this->x() * this->y();
     return ExtendedPoint({rx, ry, rz, rt});
-}
+}  // CompletedPoint::toExtended
 
-auto ExtendedPoint::add(PackedPoint const &q) const -> ExtendedPoint
+auto ExtendedPoint::operator[](size_t index) const -> bignum25519
+{
+    if (index > 3) throw std::out_of_range("Index out of range.");
+    return data_[index];
+}  // ExtendedPoint::operator[]
+
+auto ExtendedPoint::add(PrecomputedPoint const &q) const -> ExtendedPoint
 {
     auto a = (this->y() - this->x()) * q.ysubx();
     auto e = (this->y() + this->x()) * q.xaddy();
@@ -2951,15 +3406,89 @@ auto ExtendedPoint::add(PackedPoint const &q) const -> ExtendedPoint
     auto f = this->z() + this->z();
     auto g = f + c;
     f = f - c;
-    return ExtendedPoint{{e * f, h * g, g * f, e * h}};
+    return ExtendedPoint({e * f, h * g, g * f, e * h});
 }
 
-auto ExtendedPoint::operator+(PackedPoint const &rhs) const -> ExtendedPoint
+auto ExtendedPoint::add(ExtendedPrecomputedPoint const &q) const
+    -> ExtendedPrecomputedPoint
+{
+    auto a = (this->y() - this->x()) * q.ysubx();
+    auto x = (this->y() + this->x()) * q.xaddy();
+    auto y = x + a;
+    x = x - a;
+    auto c = this->t() * q.t2d();
+    auto t = this->z() * q.z();
+    t = t + t;
+    auto z = t + c;
+    t = t.subAfterBasic(c);
+    auto t2d = x * y;
+    x = x * t;
+    y = y * z;
+    return ExtendedPrecomputedPoint{
+        {x + y, y - x, z * t, t2d * bignum25519::ec2d()}};
+}  // ExtendedPoint::add
+
+auto ExtendedPoint::add(
+    ExtendedPrecomputedPoint const &q, uint8_t const signbit
+) const -> CompletedPoint
+{
+    // Derived from: ge25519_pnielsadd_p1p1
+    const auto idx1 = static_cast<size_t>(signbit & 0b0001);
+    const auto idx2 = static_cast<size_t>((signbit & 0b0001) ^ 1);
+    auto a = (this->y() - this->x()) * q[idx2];
+    auto rx = (this->y() + this->x()) * q[idx1];
+    auto ry = rx + a;
+    rx = rx - a;
+    auto c = this->t() * q.t2d();
+    auto rt = (this->z() * q.z());
+    rt = rt.addReduce(rt);
+    auto rb = CompletedPoint({rx, ry, rt, rt});
+    if (signbit == 0)
+    {
+        rb.set_z(rb[2 + idx1] + c);
+        rb.set_t(rb[2 + idx2] - c);
+    }
+    else
+    {
+        rb.set_t(rb[2 + idx1] + c);
+        rb.set_z(rb[2 + idx2] - c);
+    }
+    return rb;
+}  // ExtendedPoint::add
+
+auto ExtendedPoint::add(PrecomputedPoint const &q, uint8_t const signbit) const
+    -> CompletedPoint
+{
+    // Derived from: ge25519_nielsadd2_p1p1
+    const auto idx1 = static_cast<size_t>(signbit & 0b0001);
+    const auto idx2 = static_cast<size_t>((signbit & 0b0001) ^ 1);
+    auto a = (this->y() - this->x()) * q[idx2];
+    auto rx = (this->x() + this->y()) * q[idx1];
+    auto ry = rx + a;
+    rx = rx - a;
+    auto c = this->t() * q.t2d();
+    auto rt = this->z().addReduce(this->z());
+    auto rb = CompletedPoint({rx, ry, rt, rt});
+    if (signbit == 0)
+    {
+        rb.set_z(rb[2 + idx1] + c);
+        rb.set_t(rb[2 + idx2] - c);
+    }
+    else
+    {
+        rb.set_t(rb[2 + idx1] + c);
+        rb.set_z(rb[2 + idx2] - c);
+    }
+    return rb;
+}  // ExtendedPoint::add
+
+auto ExtendedPoint::operator+(PrecomputedPoint const &rhs) const
+    -> ExtendedPoint
 {
     return this->add(rhs);
 }  // operator +
 
-auto ExtendedPoint::add2(PackedPoint const &q) -> ExtendedPoint &
+auto ExtendedPoint::add2(PrecomputedPoint const &q) -> ExtendedPoint &
 {
     auto a = (this->y() - this->x()) * q.ysubx();
     auto e = (this->y() + this->x()) * q.xaddy();
@@ -2974,10 +3503,20 @@ auto ExtendedPoint::add2(PackedPoint const &q) -> ExtendedPoint &
     return *this;
 }
 
-auto ExtendedPoint::operator+=(PackedPoint const &rhs) -> ExtendedPoint &
+auto ExtendedPoint::operator+=(PrecomputedPoint const &rhs) -> ExtendedPoint &
 {
     return this->add2(rhs);
 }  // operator +=
+
+auto ExtendedPoint::toPrecomputedExtendedPoint() const
+    -> ExtendedPrecomputedPoint
+{
+    auto ysubx = this->y() - this->x();
+    auto xaddy = this->x() + this->y();
+    auto z = this->z();
+    auto t2d = this->t() * bignum25519::ec2d();
+    return ExtendedPrecomputedPoint({xaddy, ysubx, z, t2d});
+}  // ExtendedPoint::toPrecomputedExtendedPoint
 
 auto ExtendedPoint::doubleCompleted() const -> CompletedPoint
 {
@@ -2992,44 +3531,87 @@ auto ExtendedPoint::doubleCompleted() const -> CompletedPoint
     rx = rx.subAfterBasic(ry);
     auto rt = c.subAfterBasic(rz);
     return CompletedPoint({rx, ry, rz, rt});
-}
+}  // ExtendedPoint::doubleCompleted
 
 auto ExtendedPoint::doublePartial() const -> PartialPoint
 {
     auto t = this->doubleCompleted();
     return t.toPartial();
-}
+}  // ExtendedPoint::doublePartial
 
-// static void
-// ge25519_scalarmult_base_niels(ge25519 *r, const uint8_t
-// basepoint_table[256][96], const bignum256modm s) { 	signed char b[64];
-// 	uint32_t i;
-// 	ge25519_niels t;
+auto ExtendedPoint::doubleExtended() const -> ExtendedPoint
+{
+    auto t = this->doubleCompleted();
+    return t.toExtended();
+}  // ExtendedPoint::doubleExtended
 
-// 	contract256_window4_modm(b, s);
+auto ExtendedPoint::doubleScalarMultiple(
+    bignum25519 const &s1, bignum25519 const &s2
+) const -> ExtendedPoint
+{
+    static constexpr auto S1_SWINDOWSIZE = 5;
+    static constexpr auto S1_TABLE_SIZE = 1 << (S1_SWINDOWSIZE - 2);
+    static constexpr auto S2_SWINDOWSIZE = 7;
+    // static constexpr auto S2_TABLE_SIZE = 1 << (S2_SWINDOWSIZE - 2);
 
-// 	ge25519_scalarmult_base_choose_niels(&t, basepoint_table, 0, b[1]);
-// 	curve25519_sub_reduce(r->x, t.xaddy, t.ysubx);
-// 	curve25519_add_reduce(r->y, t.xaddy, t.ysubx);
-// 	memset(r->z, 0, sizeof(bignum25519));
-// 	curve25519_copy(r->t, t.t2d);
-// 	r->z[0] = 2;
-// 	for (i = 3; i < 64; i += 2) {
-// 		ge25519_scalarmult_base_choose_niels(&t, basepoint_table, i / 2,
-// b[i]); 		ge25519_nielsadd2(r, &t);
-// 	}
-// 	ge25519_double_partial(r, r);
-// 	ge25519_double_partial(r, r);
-// 	ge25519_double_partial(r, r);
-// 	ge25519_double(r, r);
-// 	ge25519_scalarmult_base_choose_niels(&t, basepoint_table, 0, b[0]);
-// 	curve25519_mul(t.t2d, t.t2d, ge25519_ecd);
-// 	ge25519_nielsadd2(r, &t);
-// 	for(i = 2; i < 64; i += 2) {
-// 		ge25519_scalarmult_base_choose_niels(&t, basepoint_table, i / 2,
-// b[i]); 		ge25519_nielsadd2(r, &t);
-// 	}
-// }
+    auto slide1 = contract256_slidingwindow_modm(s1, S1_SWINDOWSIZE);
+    auto slide2 = contract256_slidingwindow_modm(s2, S2_SWINDOWSIZE);
+
+    auto pre1 = std::vector<ExtendedPrecomputedPoint>(S1_TABLE_SIZE);
+    auto d1 = this->doubleExtended();
+    pre1[0] = this->toPrecomputedExtendedPoint();
+    for (auto i = 0UL; i < S1_TABLE_SIZE - 1; i++)
+        pre1[i + 1] = d1.add(pre1[i]);
+
+    // set neutral
+    auto r = ExtendedPoint{};  // all zeros
+    r.set_y(bignum25519{1, 0, 0, 0, 0});
+    r.set_z(bignum25519{1, 0, 0, 0, 0});
+
+    auto i = 255;  // must be signed
+    while ((i >= 0) && !(slide1[static_cast<unsigned int>(i)] |
+                         slide2[static_cast<unsigned int>(i)]))
+        i--;
+
+    for (; i >= 0; i--)
+    {
+        auto t = r.doubleCompleted();
+
+        if (slide1[static_cast<unsigned int>(i)])
+        {
+            r = t.toExtended();
+            t = r.add(
+                pre1[static_cast<unsigned int>(
+                    abs(slide1[static_cast<unsigned int>(i)]) / 2
+                )],
+                (unsigned char)(slide1[static_cast<unsigned int>(i)]) >> 7
+            );
+        }
+
+        if (slide2[static_cast<unsigned int>(i)])
+        {
+            r = t.toExtended();
+            t = r.add(
+                ge25519_niels_sliding_multiples[static_cast<unsigned int>(
+                    abs(slide2[static_cast<unsigned int>(i)]) / 2
+                )],
+                (unsigned char)(slide2[static_cast<unsigned int>(i)]) >> 7
+            );
+            //             ge25519_p1p1_to_full(r, &t);
+            //             ge25519_nielsadd2_p1p1(&t, r,
+            //             &ge25519_niels_sliding_multiples[abs(slide2[i]) / 2],
+            //             (unsigned char)slide2[i] >> 7);
+        }
+
+        //         ge25519_p1p1_to_partial(r, &t);
+        auto p = t.toPartial();
+        r.set_x(p.x());
+        r.set_y(p.y());
+        r.set_z(p.z());
+    }
+
+    return r;
+}  // ExtendedPoint::doubleScalarMultiple
 
 auto ExtendedPoint::multiplyBasepointByScalar(bignum25519 const &s)
     -> ExtendedPoint
@@ -3067,16 +3649,62 @@ auto ExtendedPoint::multiplyBasepointByScalar(bignum25519 const &s)
     return r;
 }  // ExtendedPoint::multiplyBasepointByScalar
 
-//  auto ExtendedPoint::pack() const -> std::array<uint8_t, 32>
-// {
-//     auto zi = this->z().recip();
-//     auto tx = this->x() * zi;
-//     auto ty = this->y() * zi;
-//     auto r = bignum25519::contract(ty);
-//     auto parity = bignum25519::contract(tx);
-//     r[31] ^= ((parity[0] & 1) << 7);
-//     return r;
-// }; // ExtendedPoint::pack
+auto ExtendedPoint::pack() const -> std::array<uint8_t, 32>
+{
+    auto zi = this->z().recip();
+    auto tx = this->x() * zi;
+    auto ty = this->y() * zi;
+    auto r = bignum25519::contract(ty);
+    auto parity = bignum25519::contract(tx);
+    r[31] ^= static_cast<uint8_t>((parity[0] & 1) << 7);
+    return r;
+}  // ExtendedPoint::pack
+
+auto ExtendedPoint::unpack(std::span<const uint8_t> p) -> ExtendedPoint
+{
+    auto parity = static_cast<uint8_t>(p[31] >> 7);
+    auto zero = std::array<uint8_t, 32>{};
+
+    auto ry = bignum25519::expand(p);
+    auto rz = bignum25519{1, 0, 0, 0, 0};
+    auto num = ry.square();               // x = y^2
+    auto den = num * bignum25519::ecd();  // den = dy^2
+    num = num.subReduce(rz);              // x = y^1 - 1
+    den = den + rz;                       // den = dy^2 + 1
+
+    // Computation of sqrt(num/den)
+    // 1.: computation of num^((p-5)/8)*den^((7p-35)/8) = (num*den^7)^((p-5)/8)
+    auto t = den.square();
+    auto d3 = t * den;
+    auto rx = d3.square();
+    rx = (rx * den * num).pow_two252m3();
+
+    // 2. computation of r->x = num * den^3 * (num*den^7)^((p-5)/8)
+    rx = rx * d3 * num;
+
+    // 3. Check if either of the roots works:
+    t = rx.square() * den;
+    auto root = t.subReduce(num);
+    auto check = bignum25519::contract(root);
+    if (!ed25519::mem_verify(check, zero))
+    {
+        t = t.addReduce(num);
+        check = bignum25519::contract(t);
+        if (!ed25519::mem_verify(check, zero))
+            throw std::runtime_error("Invalid root");
+        rx = rx * bignum25519::sqrtneg1();
+    }
+
+    check = bignum25519::contract(rx);
+    if ((check[0] & 1) == parity)
+    {
+        t = rx;
+        rx = t.neg();
+    }
+    auto rt = rx * ry;
+
+    return ExtendedPoint{{rx, ry, rz, rt}};
+}  // ExtendedPoint::pack
 
 // This function is largely just used for testing.
 auto curve25519::scalarmult_basepoint(std::array<uint8_t, 32> e)

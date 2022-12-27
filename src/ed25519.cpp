@@ -28,9 +28,12 @@
 #include <botan/rng.h>
 #include <botan/system_rng.h>
 
-// Public Cardano++ Headers
+// Public Viper Ed25519 Headers
 #include <ed25519-viper/curve25519.hpp>
 #include <ed25519-viper/ed25519.hpp>
+
+// Private Viper Ed25519 code
+#include "utils.hpp"
 
 using namespace ed25519;
 
@@ -136,6 +139,37 @@ auto PublicKey::bytes() const -> std::array<uint8_t, ED25519_KEY_SIZE>
     return copy;
 }  // PublicKey::bytes
 
+auto PublicKey::verify(
+    std::span<const uint8_t> msg, std::span<const uint8_t> sig
+) const -> bool
+{
+    if (sig.size() != ED25519_SIGNATURE_SIZE)
+        throw std::invalid_argument("Invalid signature size.");
+
+    if (sig[63] & 224) throw std::invalid_argument("Invalid signature.");
+
+    // This may also throw an exception
+    const auto a = curve25519::ExtendedPoint::unpack(this->pub_);
+
+    // hram = H(R,A,m)
+    const auto sha512 = Botan::HashFunction::create("SHA-512");
+    sha512->update(sig.data(), 32);
+    sha512->update(this->pub_.data(), this->pub_.size());
+    sha512->update(msg.data(), msg.size());
+    auto hash = sha512->final();
+    auto hram = curve25519::bignum25519::expand256_modm(hash);
+
+    // S
+    auto s = curve25519::bignum25519::expand256_modm({sig.data() + 32, 32});
+
+    // SB - H(R,A,m)A
+    auto r = a.doubleScalarMultiple(hram, s);
+    auto check_r = r.pack();  // 32 bytes
+
+    // check that R = SB - H(R,A,m)A
+    return mem_verify({sig.data(), 32}, check_r);
+}  // PublicKey::verify
+
 ExtendedPrivateKey::ExtendedPrivateKey(std::span<const uint8_t> prv)
 {
     if (prv.size() != ED25519_EXTENDED_KEY_SIZE)
@@ -189,14 +223,14 @@ auto ExtendedPrivateKey::sign(std::span<const uint8_t> msg) const
     // Derive the public key
     auto pk = this->publicKey().bytes();
 
-	// r = H(aExt[32..64], m)
+    // r = H(aExt[32..64], m)
     const auto sha512 = Botan::HashFunction::create("SHA-512");
     sha512->update(this->prv_.data() + 32, 32);
     sha512->update(msg.data(), msg.size());
     auto hashr = sha512->final();
     auto r = curve25519::bignum25519::expand256_modm(hashr);
 
-    // R = rB 
+    // R = rB
     auto rb = curve25519::ExtendedPoint::multiplyBasepointByScalar(r);
     auto rs = rb.pack();
 

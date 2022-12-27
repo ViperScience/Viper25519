@@ -114,6 +114,9 @@ class PublicKey
     [[nodiscard]] auto bytes() const -> std::array<uint8_t, ED25519_KEY_SIZE>;
 
     // verify signature
+    [[nodiscard]] auto verify(
+        std::span<const uint8_t> msg, std::span<const uint8_t> sig
+    ) const -> bool;
 
 };  // PublicKey
 
