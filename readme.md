@@ -42,7 +42,7 @@ The Viper-Ed25519 library wraps the Ed25519 capability in three classes: `Ed2551
 
 ### Verifying Signatures
 
-    auto check = pub.verify(sig);
+    auto check = pub.verifySignature(msg, sig);
 
 ### Loading Keys
 
@@ -85,7 +85,8 @@ The Viper-Ed25519 library links with Botan for SHA-512 hasing capability.
 * [Botan-2](https://botan.randombit.net/)
 
 The provided Docker file demonstrates how to build and install the required 
-dependencies and Cmake find scripts are also provided.
+dependencies. Additionally, the library provides a Cmake find script for 
+Botan-2.
 
 ## Related Projects
 

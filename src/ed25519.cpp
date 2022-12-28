@@ -139,7 +139,7 @@ auto PublicKey::bytes() const -> std::array<uint8_t, ED25519_KEY_SIZE>
     return copy;
 }  // PublicKey::bytes
 
-auto PublicKey::verify(
+auto PublicKey::verifySignature(
     std::span<const uint8_t> msg, std::span<const uint8_t> sig
 ) const -> bool
 {
@@ -197,7 +197,7 @@ auto ExtendedPrivateKey::isValid() const -> bool
     );
 }  // ExtendedPrivateKey::isValid
 
-auto ExtendedPrivateKey::bytes() const -> ExtKeyBytes
+auto ExtendedPrivateKey::bytes() const -> ExtKeyByteArray
 {
     auto copy = this->prv_;
     return copy;

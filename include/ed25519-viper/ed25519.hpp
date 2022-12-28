@@ -23,6 +23,7 @@
 
 #include <sys/mman.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <span>
@@ -37,7 +38,7 @@ static constexpr size_t ED25519_SIGNATURE_SIZE = 64;
 
 // To-Do: rewrite this...
 template <class T, std::size_t Size>
-struct KeyArray : public std::array<T, Size>
+struct SecureByteArray : public std::array<T, Size>
 {
     static_assert(
         std::is_standard_layout<T>::value && std::is_trivial<T>::value,
@@ -45,18 +46,21 @@ struct KeyArray : public std::array<T, Size>
     );
     static_assert(sizeof(T) == 1, "Only 1-byte types allowed");
 
-    KeyArray(void) { mlock(std::array<T, Size>::data(), sizeof(T) * Size); }
+    SecureByteArray(void)
+    {
+        mlock(std::array<T, Size>::data(), sizeof(T) * Size);
+    }
 
-    ~KeyArray(void)
+    ~SecureByteArray(void)
     {
         char *bytes = reinterpret_cast<char *>(std::array<T, Size>::data());
-        for (std::size_t i = 0; i < sizeof(T) * Size; i++) bytes[i] = 0;
+        std::fill_n<volatile char *>(bytes, sizeof(T) * Size, 0);
         munlock(bytes, sizeof(T) * Size);
     }
 };
 
-using KeyBytes = KeyArray<uint8_t, ED25519_KEY_SIZE>;
-using ExtKeyBytes = KeyArray<uint8_t, ED25519_EXTENDED_KEY_SIZE>;
+using KeyByteArray = SecureByteArray<uint8_t, ED25519_KEY_SIZE>;
+using ExtKeyByteArray = SecureByteArray<uint8_t, ED25519_EXTENDED_KEY_SIZE>;
 
 // Forward Declarations
 class PrivateKey;
@@ -67,7 +71,7 @@ class PrivateKey
 {
   private:
     /// Private key byte array (unencrypted)
-    KeyBytes prv_;
+    KeyByteArray prv_;
 
     /// Make the default constructor private so that it can only be used
     /// internally.
@@ -82,16 +86,17 @@ class PrivateKey
     /// cryptographically secure random number generator.
     [[nodiscard]] static auto generate() -> PrivateKey;
 
-    /// Check key validity.
+    /// @brief Check key validity.
     [[nodiscard]] auto isValid() const -> bool;
 
-    /// Extend the Ed25519 key for inclusion in a BIP32-Ed25519 wallet.
+    /// @brief Extend the Ed25519 key for inclusion in a BIP32-Ed25519 wallet.
     [[nodiscard]] auto extend() const -> ExtendedPrivateKey;
 
-    /// Derive the public key paired with this private key.
+    /// @brief Derive the public key paired with this private key.
     [[nodiscard]] auto publicKey() const -> PublicKey;
 
-    /// Generate a message signature from the private key.
+    /// @brief Generate a message signature from the private key.
+    /// @param msg A span of bytes (uint8_t) representing the message to sign.
     [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
         -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>;
 
@@ -104,17 +109,23 @@ class PublicKey
     std::array<uint8_t, ED25519_KEY_SIZE> pub_{};
 
   public:
+    /// @brief Construct a key object from a span of key bytes.
+    /// @param pub An array of 32 bytes that will be moved into the object.
     constexpr PublicKey(std::array<uint8_t, ED25519_KEY_SIZE> pub) : pub_{pub}
     {
     }
 
+    /// @brief Construct a key object from a span of key bytes.
+    /// @param pub A span of 32 bytes that will be moved into the object.
     PublicKey(std::span<const uint8_t> pub);
 
-    /// Return the public key as a byte vector.
+    /// @brief Return the public key as a byte vector.
     [[nodiscard]] auto bytes() const -> std::array<uint8_t, ED25519_KEY_SIZE>;
 
-    // verify signature
-    [[nodiscard]] auto verify(
+    /// @brief Verify a signature using the public key.
+    /// @param msg A span of bytes (uint8_t) representing the original message.
+    /// @param sig A span of 64 bytes (uint8_t) representing the signature.
+    [[nodiscard]] auto verifySignature(
         std::span<const uint8_t> msg, std::span<const uint8_t> sig
     ) const -> bool;
 
@@ -124,25 +135,26 @@ class ExtendedPrivateKey
 {
   private:
     /// Private key byte array (unencrypted)
-    ExtKeyBytes prv_;
+    ExtKeyByteArray prv_;
 
   public:
     ExtendedPrivateKey(std::span<const uint8_t> prv);
 
-    /// Return the public key as a secure byte vector.
-    [[nodiscard]] auto bytes() const -> ExtKeyBytes;
+    /// @brief Return the public key as a secure byte vector.
+    [[nodiscard]] auto bytes() const -> ExtKeyByteArray;
 
     /// Factory method to create a new Ed25519 private key from a
     /// cryptographically secure random number generator.
     [[nodiscard]] static auto generate() -> ExtendedPrivateKey;
 
-    /// Check key validity.
+    /// @brief Check key validity.
     [[nodiscard]] auto isValid() const -> bool;
 
-    /// Derive the public key paired with this private key.
+    /// @brief Derive the public key paired with this private key.
     [[nodiscard]] auto publicKey() const -> PublicKey;
 
-    /// Generate a message signature from the private key.
+    /// @brief Generate a message signature from the private key.
+    /// @param msg A span of bytes (uint8_t) representing the message to sign.
     [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
         -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>;
 

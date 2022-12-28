@@ -31,7 +31,7 @@ auto testBasic() -> void
 
     // Verify the signature
     const auto pub_key = PublicKey(pub_key_bytes);
-    TEST_ASSERT_THROW(pub_key.verify(msg, sig))
+    TEST_ASSERT_THROW(pub_key.verifySignature(msg, sig))
 }
 
 auto testAdvanced() -> void
@@ -74,7 +74,7 @@ auto testAdvanced() -> void
 
     // Verify the signature
     const auto pub_key = PublicKey(pub_key_bytes);
-    TEST_ASSERT_THROW(pub_key.verify(
+    TEST_ASSERT_THROW(pub_key.verifySignature(
         {reinterpret_cast<const uint8_t*>(msg_str.data()), msg_str.size()}, sig
     ))
 }
