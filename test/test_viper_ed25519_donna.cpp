@@ -2,6 +2,7 @@
 // https://github.com/floodyberry/ed25519-donna/blob/master/test.c
 
 #include <ed25519-viper/curve25519.hpp>
+#include <ed25519-viper/ed25519.hpp>
 #include <test/testing.hpp>
 
 auto testBasepoint() -> void
@@ -21,7 +22,45 @@ auto testBasepoint() -> void
     TEST_ASSERT_THROW(csk[0] == curved25519_expected)
 }
 
-auto testAdvanced() -> void { TEST_ASSERT_THROW(true) }
+auto testAdvanced() -> void
+{
+    // test data
+    typedef struct test_data_t
+    {
+        unsigned char sk[32], pk[32], sig[64];
+        const char *m;
+    } test_data;
+    test_data dataset[] = {
+#include "regression.h"
+    };
+
+    for (auto i = 0UL; i < 1024; i++)
+    {
+        auto sk = ed25519::PrivateKey({dataset[i].sk, 32});
+        auto pk = sk.publicKey();
+
+        // Not all the keys in the regression tests are valid according to this
+        // library since they do not enforce the cleared bit,
+        // i.e., keyhash[31] & 0b00100000 == 0.
+        if (!sk.isValid()) continue;
+        // Only 470 of the 1024 pass the validity check :/
+
+        // Check that the same public key was derived.
+        auto pk_bytes = pk.bytes();
+        for (auto j = 0UL; j < 32; j++)
+            TEST_ASSERT_THROW(pk_bytes[j] == dataset[i].pk[j])
+
+        // Sign the message
+        auto msg = std::span<const uint8_t>{
+            reinterpret_cast<const uint8_t *>(dataset[i].m), i};
+        auto sig = sk.sign(msg);
+
+        // Verify the message signature
+        TEST_ASSERT_THROW(pk.verifySignature(msg, sig));
+        for (auto j = 0UL; j < 64; j++)
+            TEST_ASSERT_THROW(sig[j] == dataset[i].sig[j])
+    }
+}
 
 auto main() -> int
 {
