@@ -1,10 +1,11 @@
 stages:
-  - build
-  - test
+  - build-debug
+  - coverage-report
+  - build-release
 
 docker-build:
   image: docker:latest
-  stage: build
+  stage: build-debug
   services:
     - docker:dind
   before_script:
@@ -30,9 +31,18 @@ docker-build:
 
 coverage:
   image: "$CI_REGISTRY_IMAGE"
-  stage: test
+  stage: coverage-report
   script:
     - cd /opt
     - curl -Os https://uploader.codecov.io/latest/linux/codecov
     - chmod +x codecov
     - ./codecov
+
+release-build:
+  image: "$CI_REGISTRY_IMAGE"
+  stage: build-release
+  script:
+    - cd /opt
+    - cmake -S . -B cmake-build-release/ -D CMAKE_BUILD_TYPE=Release
+    - cmake --build cmake-build-release/ --parallel 8
+    - ctest --test-dir cmake-build-release/ --output-on-failure -T Test

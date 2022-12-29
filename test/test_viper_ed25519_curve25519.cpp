@@ -187,14 +187,6 @@ auto test_ExtendedPoint_addPrecomp_v3() -> void
     constexpr auto z_donna1 = curve25519::bignum25519{0x000ecd1a74f70c11, 0x00088d2a9258bb0e, 0x000e53c437ca167e, 0x0009c8fac8a369bb, 0x000e5b7dbd315644};
     constexpr auto t_donna1 = curve25519::bignum25519{0x000132e58b08f3cd, 0x000772d56da744f0, 0x0001ac3bc835e980, 0x00063705375c9643, 0x0001a48242cea9ba};
 
-// 0x000fffffffffffda, 0x000ffffffffffffe, 0x000ffffffffffffe, 0x000ffffffffffffe, 0x000ffffffffffffe, 
-// The value of Output.y is:
-// 0x000132e58b08f3ba, 0x000772d56da744f0, 0x0009ac3bc835e980, 0x00063705375c9642, 0x0009a48242cea9ba, 
-// The value of Output.z is:
-// 0x000ecd1a74f70c11, 0x00088d2a9258bb0e, 0x000e53c437ca167e, 0x0009c8fac8a369bb, 0x000e5b7dbd315644, 
-// The value of Output.t is:
-// 0x000132e58b08f3cd, 0x000772d56da744f0, 0x0001ac3bc835e980, 0x00063705375c9643, 0x0001a48242cea9ba, 
-
     TEST_ASSERT_THROW(r.x() == x_donna1)
     TEST_ASSERT_THROW(r.y() == y_donna1)
     TEST_ASSERT_THROW(r.z() == z_donna1)

@@ -84,6 +84,12 @@ auto PrivateKey::generate() -> PrivateKey
     return PrivateKey(skey);
 }  // PrivateKey::generate
 
+auto PrivateKey::bytes() const -> KeyByteArray
+{
+    auto copy = this->prv_;
+    return copy;
+}  // PrivateKey::bytes
+
 auto PrivateKey::isValid() const -> bool
 {
     const auto sha512 = Botan::HashFunction::create("SHA-512");

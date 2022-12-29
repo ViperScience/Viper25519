@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.23)
 
 # set the project name, language,  and version
 project(ed25519-viper 
@@ -35,6 +35,7 @@ endif()
 
 # Include a thread library for linking that is specific to the platform.
 find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Add the local cmake directory to the path for custom search files
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -75,6 +76,8 @@ include_directories(${PROJECT_NAME}
 # Enable testing globally. Individual tests may be found in the `tests`
 # subdirectory of the repository.
 
+option(RUN_ALL_TESTS "Run all the unittests (mainly for debugging)" OFF)
+
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CTestCustom.cmake.in 
     ${CMAKE_BINARY_DIR}/CTestCustom.cmake
@@ -101,6 +104,7 @@ add_library(${PROJECT_NAME} ${VIPER_ED25519_SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE
     botan::botan
     Threads::Threads
+    OpenSSL::SSL
 )
 
 ################################################################################

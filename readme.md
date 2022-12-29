@@ -4,12 +4,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An implementation of the Ed25519 elliptic curve digital signature standard in
-modern C++. The library is largley based on the popular [Ed25519-donna](https://github.com/floodyberry/ed25519-donna) constant 
+modern C++. The library is largley based on the popular 
+[Ed25519-donna](https://github.com/floodyberry/ed25519-donna) constant 
 time implementation with support for
 [extended private keys](https://raw.githubusercontent.com/input-output-hk/adrestia/master/docs/static/Ed25519_BIP.pdf).
 
 ## Basic Usage
-The Viper-Ed25519 library wraps the Ed25519 capability in three classes: `Ed25519PrivateKey`, `Ed25519PublicKey`, and `Ed25519ExtendedPrivateKey`. Examples of how to use these classes are demonstrated below. The examples assume the following to be at the top of the source file.
+The Viper-Ed25519 library wraps the Ed25519 capability in three classes: 
+`Ed25519PrivateKey`, `Ed25519PublicKey`, and `Ed25519ExtendedPrivateKey`. 
+Examples of how to use these classes are demonstrated below. The examples assume
+the following to be at the top of the source file.
 
     #include <ed25519-viper/ed25519.hpp>
     using namespace ed25519; // the key objects exist within this namespace
@@ -80,15 +84,18 @@ dependency installation.
     docker build -t com.viperscience.viper-ed25519:latest .
 
 ## Dependencies
-The Viper-Ed25519 library links with Botan for SHA-512 hasing capability.
+The Viper-Ed25519 library links with Botan for SHA-512 hasing capability. Botan 
+uses functionality provided by OpenSSL.
 
 * [Botan-2](https://botan.randombit.net/)
+* [OpenSSL](https://www.openssl.org/)
 
-The provided Docker file demonstrates how to build and install the required 
-dependencies. Additionally, the library provides a Cmake find script for 
-Botan-2.
+The provided Docker file demonstrates how to install the required 
+dependencies prior to building the Viper Ed25519 library in a Debian 
+environment. Additionally, a Cmake find script for Botan-2 is provided in the 
+[cmake folder](https://gitlab.com/viper-staking/ed25519-viper/-/blob/main/cmake/FindBotan.cmake).
 
 ## Related Projects
 
-The Viper-Ed25519 library was originally started as part of the 
+The Viper Ed25519 library was originally started as part of the 
 [libcardano](https://gitlab.com/viper-staking/libcardano) project.

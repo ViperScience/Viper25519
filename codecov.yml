@@ -1,0 +1,14 @@
+---
+codecov:
+  bot: viperscience-bot
+
+ignore:
+  - "test"
+  - "**/test_*.cpp"
+
+coverage:
+  status:
+    project:
+      default:
+        target: 96%
+        threshold: 1%

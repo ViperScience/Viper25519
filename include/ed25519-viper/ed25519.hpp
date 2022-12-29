@@ -82,6 +82,9 @@ class PrivateKey
     /// @param prv A span of 32 bytes that will be moved into the object.
     PrivateKey(std::span<const uint8_t> prv);
 
+    /// @brief Return the private key as a secure byte vector.
+    [[nodiscard]] auto bytes() const -> KeyByteArray;
+
     /// Factory method to create a new Ed25519 private key from a
     /// cryptographically secure random number generator.
     [[nodiscard]] static auto generate() -> PrivateKey;
@@ -140,7 +143,7 @@ class ExtendedPrivateKey
   public:
     ExtendedPrivateKey(std::span<const uint8_t> prv);
 
-    /// @brief Return the public key as a secure byte vector.
+    /// @brief Return the private key as a secure byte vector.
     [[nodiscard]] auto bytes() const -> ExtKeyByteArray;
 
     /// Factory method to create a new Ed25519 private key from a
