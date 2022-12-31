@@ -1,7 +1,9 @@
 # Viper Ed25519
 [![build](https://gitlab.com/viper-staking/ed25519-viper/badges/main/pipeline.svg)](https://gitlab.com/viper-staking/ed25519-viper/-/commits/main)
 [![codecov](https://codecov.io/gl/viper-staking/ed25519-viper/branch/main/graph/badge.svg?token=B7F7UR16TG)](https://codecov.io/gl/viper-staking/ed25519-viper)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Language](https://img.shields.io/badge/Language-C++-blue.svg)](https://gitlab.com/viper-staking/ed25519-viper/-/graphs/main/charts)
+[![C++ Standard](https://img.shields.io/badge/std-C++20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
 
 An implementation of the Ed25519 elliptic curve digital signature standard in
 modern C++. The library is largley based on the popular 
@@ -94,6 +96,10 @@ The provided Docker file demonstrates how to install the required
 dependencies prior to building the Viper Ed25519 library in a Debian 
 environment. Additionally, a Cmake find script for Botan-2 is provided in the 
 [cmake folder](https://gitlab.com/viper-staking/ed25519-viper/-/blob/main/cmake/FindBotan.cmake).
+
+## Platform Support
+
+This library currently supports 64-bit Unix platforms only.
 
 ## Related Projects
 
