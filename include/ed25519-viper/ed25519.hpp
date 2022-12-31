@@ -29,35 +29,14 @@
 #include <span>
 #include <vector>
 
+#include <ed25519-viper/secmem.hpp>
+
 namespace ed25519
 {
 
 static constexpr size_t ED25519_KEY_SIZE = 32;
 static constexpr size_t ED25519_EXTENDED_KEY_SIZE = 64;
 static constexpr size_t ED25519_SIGNATURE_SIZE = 64;
-
-// To-Do: rewrite this...
-template <class T, std::size_t Size>
-struct SecureByteArray : public std::array<T, Size>
-{
-    static_assert(
-        std::is_standard_layout<T>::value && std::is_trivial<T>::value,
-        "Only POD types allowed"
-    );
-    static_assert(sizeof(T) == 1, "Only 1-byte types allowed");
-
-    SecureByteArray(void)
-    {
-        mlock(std::array<T, Size>::data(), sizeof(T) * Size);
-    }
-
-    ~SecureByteArray(void)
-    {
-        char *bytes = reinterpret_cast<char *>(std::array<T, Size>::data());
-        std::fill_n<volatile char *>(bytes, sizeof(T) * Size, 0);
-        munlock(bytes, sizeof(T) * Size);
-    }
-};
 
 using KeyByteArray = SecureByteArray<uint8_t, ED25519_KEY_SIZE>;
 using ExtKeyByteArray = SecureByteArray<uint8_t, ED25519_EXTENDED_KEY_SIZE>;
