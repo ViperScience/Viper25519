@@ -26,13 +26,13 @@ the following to be at the top of the source file.
     auto key = Ed25519PrivateKey::generate();
 
     // Extend to an Extended Ed25519 private key
-    auto ext_key = ed25519_key.extend();
-    // Or create from scratch
+    auto ext_key = key.extend();
+    // Or create an extended key from scratch
     auto ext_key = Ed25519ExtendedPrivateKey::generate();
 
     // Derive the public key
     auto pub_key = key.publicKey();
-    // Or from extended key
+    // Or from an extended key
     auto pub_key = ext_key.publicKey();
 
 ### Generating Signatures

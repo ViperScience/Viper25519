@@ -31,7 +31,7 @@ auto testAdvanced() -> void
         const char *m;
     } test_data;
     test_data dataset[] = {
-#include "regression.h"
+#include "regression_data.txt"
     };
 
     for (auto i = 0UL; i < 1024; i++)
