@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef _VIPER_CURVE25519_HPP_
-#define _VIPER_CURVE25519_HPP_
+#ifndef _VIPER25519_CURVE25519_HPP_
+#define _VIPER25519_CURVE25519_HPP_
 
 #include <array>
 #include <cstdint>
@@ -426,4 +426,4 @@ auto scalarmult_basepoint(std::array<uint8_t, 32> pk)
 
 }  // namespace curve25519
 
-#endif  // _VIPER_CURVE25519_HPP_
+#endif  // _VIPER25519_CURVE25519_HPP_

@@ -28,11 +28,11 @@
 #include <botan/rng.h>
 #include <botan/system_rng.h>
 
-// Public Viper Ed25519 Headers
-#include <ed25519-viper/curve25519.hpp>
-#include <ed25519-viper/ed25519.hpp>
+// Public Viper25519 Headers
+#include <viper25519/curve25519.hpp>
+#include <viper25519/ed25519.hpp>
 
-// Private Viper Ed25519 code
+// Private Viper25519 code
 #include "utils.hpp"
 
 using namespace ed25519;

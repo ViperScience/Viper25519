@@ -1,5 +1,5 @@
 
-#include <ed25519-viper/curve25519.hpp>
+#include <viper25519/curve25519.hpp>
 
 #include "testing.hpp"
 

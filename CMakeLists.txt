@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.23)
 
 # set the project name, language,  and version
-project(ed25519-viper 
-    DESCRIPTION "A port of the popular ed25519-donna code to modern C++."
+project(viper25519 
+    DESCRIPTION "C++ development toolkit for ECDSA signatures and secret/public key operations on elliptic curve 25519."
     VERSION 1.0.0
     LANGUAGES CXX
 )
@@ -91,14 +91,14 @@ add_subdirectory(test)
 ################################################################################
 
 # Specify the Viper-Ed25519 source files (including submodules)
-set(VIPER_ED25519_SOURCES
+set(VIPER25519_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
     ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
 )
 
 # Add the library to build but do not specify STATIC vs. SHARED. A shared 
 # library will be built if CMake is run with: -DBUILD_SHARED_LIBS=ON
-add_library(${PROJECT_NAME} ${VIPER_ED25519_SOURCES})
+add_library(${PROJECT_NAME} ${VIPER25519_SOURCES})
 
 # Specify libraries for linking
 target_link_libraries(${PROJECT_NAME} PRIVATE

@@ -1,4 +1,4 @@
-#include <ed25519-viper/ed25519.hpp>
+#include <viper25519/ed25519.hpp>
 #include <test/testing.hpp>
 
 using namespace ed25519;

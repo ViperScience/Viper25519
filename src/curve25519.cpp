@@ -31,7 +31,7 @@ typedef __uint128_t uint128_t;
 #endif
 
 // Public Viper Ed25519 Headers
-#include <ed25519-viper/curve25519.hpp>
+#include <viper25519/curve25519.hpp>
 
 // Private Viper Ed25519 Headers
 #include "utils.hpp"

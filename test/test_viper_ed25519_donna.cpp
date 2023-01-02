@@ -1,8 +1,8 @@
 // Repeat tests defined at
 // https://github.com/floodyberry/ed25519-donna/blob/master/test.c
 
-#include <ed25519-viper/curve25519.hpp>
-#include <ed25519-viper/ed25519.hpp>
+#include <viper25519/curve25519.hpp>
+#include <viper25519/ed25519.hpp>
 #include <test/testing.hpp>
 
 auto testBasepoint() -> void

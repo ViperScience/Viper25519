@@ -13,7 +13,7 @@ target_link_libraries(test_api PRIVATE
     Threads::Threads
     OpenSSL::SSL
 )
-ADD_TEST("Ed25519-Viper API" test_api)
+ADD_TEST("Viper25519 Ed25519 API" test_api)
 
 ########################################################################
 # Run all individual tests for debugging scenarios

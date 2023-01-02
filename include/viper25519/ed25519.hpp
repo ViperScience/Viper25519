@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef _VIPER_ED25519_HPP_
-#define _VIPER_ED25519_HPP_
+#ifndef _VIPER25519_ED25519_HPP_
+#define _VIPER25519_ED25519_HPP_
 
 #include <sys/mman.h>
 
@@ -29,7 +29,7 @@
 #include <span>
 #include <vector>
 
-#include <ed25519-viper/secmem.hpp>
+#include <viper25519/secmem.hpp>
 
 namespace ed25519
 {
@@ -144,4 +144,4 @@ class ExtendedPrivateKey
 
 }  // namespace ed25519
 
-#endif  // _VIPER_ED25519_HPP_
+#endif  // _VIPER25519_ED25519_HPP_
