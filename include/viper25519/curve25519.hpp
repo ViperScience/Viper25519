@@ -376,6 +376,8 @@ class ExtendedPoint
         return ExtendedPoint({x, y, z, t});
     }  // ExtendedPoint::basepoint
 
+    [[nodiscard]] auto add(ExtendedPoint const &rhs) const -> CompletedPoint;
+
     [[nodiscard]] auto add(PrecomputedPoint const &q) const -> ExtendedPoint;
 
     [[nodiscard]] auto add(ExtendedPrecomputedPoint const &q) const
@@ -390,11 +392,13 @@ class ExtendedPoint
 
     [[nodiscard]] auto add2(PrecomputedPoint const &q) -> ExtendedPoint &;
 
+    auto operator+(ExtendedPoint const &rhs) const -> ExtendedPoint;
+
     auto operator+(PrecomputedPoint const &rhs) const -> ExtendedPoint;
 
     auto operator+=(PrecomputedPoint const &rhs) -> ExtendedPoint &;
 
-    auto toCompleted() const -> CompletedPoint;
+    // auto toCompleted() const -> CompletedPoint;
 
     auto toPrecomputedExtendedPoint() const -> ExtendedPrecomputedPoint;
 

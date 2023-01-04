@@ -176,6 +176,21 @@ auto PublicKey::verifySignature(
     return mem_verify({sig.data(), 32}, check_r);
 }  // PublicKey::verify
 
+auto PublicKey::pointAdd(const PublicKey& rhs) const -> PublicKey
+{
+    const auto rhs_bytes = rhs.bytes();
+
+    // This may throw an exception
+    const auto p = curve25519::ExtendedPoint::unpack(this->pub_);
+    const auto q = curve25519::ExtendedPoint::unpack(rhs_bytes);
+
+    const auto r = p + q;
+    auto res = r.pack();
+
+    res[31] ^= 0x80;
+    return PublicKey(res);
+}  // PublicKey::pointAdd
+
 ExtendedPrivateKey::ExtendedPrivateKey(std::span<const uint8_t> prv)
 {
     if (prv.size() != ED25519_EXTENDED_KEY_SIZE)
@@ -264,3 +279,14 @@ auto ExtendedPrivateKey::sign(std::span<const uint8_t> msg) const
     std::copy_n(sbytes.begin(), 32, sig.begin() + 32);
     return sig;
 }  // ExtendedPrivateKey::sign
+
+auto ExtendedPrivateKey::scalerAddLowerBytes(const ExtendedPrivateKey& rhs
+) const -> std::array<uint8_t, 32>
+{
+    const auto lhs_bytes = this->bytes();
+    const auto rhs_bytes = rhs.bytes();
+    auto s1 = curve25519::bignum25519::expand256_modm({lhs_bytes.data(), 32});
+    auto s2 = curve25519::bignum25519::expand256_modm({rhs_bytes.data(), 32});
+    auto s = curve25519::bignum25519::add256_modm(s1, s2);
+    return curve25519::bignum25519::contract256_modm(s);
+}  // ExtendedPrivateKey::scalerAddLowerBytes

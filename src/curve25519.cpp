@@ -3396,6 +3396,25 @@ auto ExtendedPoint::operator[](size_t index) const -> bignum25519
     return data_[index];
 }  // ExtendedPoint::operator[]
 
+auto ExtendedPoint::add(ExtendedPoint const &q) const -> CompletedPoint
+{
+    auto a = this->y() - this->x();
+    auto b = this->y() + this->x();
+    auto t = q.y() - q.x();
+    auto u = q.y() + q.x();
+    a = a * t;
+    b = b * u;
+    auto c = this->t() * q.t();
+    c = c * bignum25519::ec2d();
+    auto d = this->z() * q.z();
+    d = d + d;
+    auto rx = b - a;
+    auto ry = b + a;
+    auto rz = d + c;
+    auto rt = d.subAfterBasic(c);
+    return CompletedPoint({rx, ry, rz, rt});
+}  // ExtendedPoint::add
+
 auto ExtendedPoint::add(PrecomputedPoint const &q) const -> ExtendedPoint
 {
     auto a = (this->y() - this->x()) * q.ysubx();
@@ -3407,7 +3426,7 @@ auto ExtendedPoint::add(PrecomputedPoint const &q) const -> ExtendedPoint
     auto g = f + c;
     f = f - c;
     return ExtendedPoint({e * f, h * g, g * f, e * h});
-}
+}  // ExtendedPoint::add
 
 auto ExtendedPoint::add(ExtendedPrecomputedPoint const &q) const
     -> ExtendedPrecomputedPoint
@@ -3482,6 +3501,12 @@ auto ExtendedPoint::add(PrecomputedPoint const &q, uint8_t const signbit) const
     return rb;
 }  // ExtendedPoint::add
 
+auto ExtendedPoint::operator+(ExtendedPoint const &rhs) const -> ExtendedPoint
+{
+    auto cp = this->add(rhs);
+    return cp.toExtended();
+}  // operator +
+
 auto ExtendedPoint::operator+(PrecomputedPoint const &rhs) const
     -> ExtendedPoint
 {
@@ -3517,6 +3542,10 @@ auto ExtendedPoint::toPrecomputedExtendedPoint() const
     auto t2d = this->t() * bignum25519::ec2d();
     return ExtendedPrecomputedPoint({xaddy, ysubx, z, t2d});
 }  // ExtendedPoint::toPrecomputedExtendedPoint
+
+// auto ExtendedPoint::toCompleted() const -> CompletedPoint
+// {
+// } // ExtendedPoint::toCompleted
 
 auto ExtendedPoint::doubleCompleted() const -> CompletedPoint
 {

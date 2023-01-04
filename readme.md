@@ -52,7 +52,7 @@ the following to be at the top of the source file.
 
 ### Loading Keys
 
-Existing keys may also be loaded into the constructors of each object as span of bytes.
+Existing keys may also be loaded into the constructors of each object as a span of bytes.
 
     // Private key bytes may be loaded from any container type.
     auto pkey_bytes = std::array<uint8_t, 32>{...}; // <- load key bytes here

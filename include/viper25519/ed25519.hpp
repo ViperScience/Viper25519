@@ -28,7 +28,6 @@
 #include <cstdint>
 #include <span>
 #include <vector>
-
 #include <viper25519/secmem.hpp>
 
 namespace ed25519
@@ -111,6 +110,14 @@ class PublicKey
         std::span<const uint8_t> msg, std::span<const uint8_t> sig
     ) const -> bool;
 
+    /// @brief Add two public keys as curve25519 points.
+    /// Add two public keys as two points on the elliptic curve 25519. This is
+    /// useful during child key derivation when the keys are part of BIP32 style
+    /// wallets.
+    /// @param rhs The public key that will be added to the object.
+    /// @returns A public key that is the result of the summation.
+    [[nodiscard]] auto pointAdd(const PublicKey& rhs) const -> PublicKey;
+
 };  // PublicKey
 
 class ExtendedPrivateKey
@@ -139,6 +146,16 @@ class ExtendedPrivateKey
     /// @param msg A span of bytes (uint8_t) representing the message to sign.
     [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
         -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>;
+
+    /// @brief Add the lower bytes of two secret keys as scalar values.
+    /// Add the lower 32 bytes of two extended secret keys as two large scalars.
+    /// The result is a 32 byte array. This may be used during child key
+    /// derivation when the keys are part of BIP32 style wallets.
+    /// @param rhs The secret key that will be added to the key within the
+    /// object.
+    /// @returns A 32-byte array containing the result of the summation.
+    [[nodiscard]] auto scalerAddLowerBytes(const ExtendedPrivateKey& rhs) const
+        -> std::array<uint8_t, 32>;
 
 };  // ExtendedPrivateKey
 
