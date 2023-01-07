@@ -60,8 +60,12 @@ class PrivateKey
     /// @param prv A span of 32 bytes that will be moved into the object.
     PrivateKey(std::span<const uint8_t> prv);
 
-    /// @brief Return the private key as a secure byte vector.
-    [[nodiscard]] auto bytes() const -> KeyByteArray;
+    /// @brief Return a constant reference to the private key secure byte
+    /// array.
+    [[nodiscard]] constexpr auto bytes() const -> const KeyByteArray&
+    {
+        return this->prv_;
+    }
 
     /// Factory method to create a new Ed25519 private key from a
     /// cryptographically secure random number generator.
@@ -100,8 +104,12 @@ class PublicKey
     /// @param pub A span of 32 bytes that will be moved into the object.
     PublicKey(std::span<const uint8_t> pub);
 
-    /// @brief Return the public key as a byte vector.
-    [[nodiscard]] auto bytes() const -> std::array<uint8_t, ED25519_KEY_SIZE>;
+    /// @brief Return a constant reference to the public key byte array.
+    [[nodiscard]] constexpr auto bytes() const
+        -> const std::array<uint8_t, ED25519_KEY_SIZE>&
+    {
+        return this->pub_;
+    }
 
     /// @brief Verify a signature using the public key.
     /// @param msg A span of bytes (uint8_t) representing the original message.
@@ -129,8 +137,12 @@ class ExtendedPrivateKey
   public:
     ExtendedPrivateKey(std::span<const uint8_t> prv);
 
-    /// @brief Return the private key as a secure byte vector.
-    [[nodiscard]] auto bytes() const -> ExtKeyByteArray;
+    /// @brief Return a constant reference to the private key secure byte
+    /// array.
+    [[nodiscard]] constexpr auto bytes() const -> const ExtKeyByteArray&
+    {
+        return this->prv_;
+    }
 
     /// Factory method to create a new Ed25519 private key from a
     /// cryptographically secure random number generator.
