@@ -183,8 +183,13 @@ ExtendedPrivateKey::ExtendedPrivateKey(std::span<const uint8_t> prv)
 {
     if (prv.size() != ED25519_EXTENDED_KEY_SIZE)
         throw std::invalid_argument("Not a valid extended Ed25519 key.");
-    if ((prv[31] & 0b00100000) != 0)
-        throw std::invalid_argument("Not a valid extended Ed25519 key.");
+    
+    // Do not check for validity here since sometimes byte arrays may be run
+    // through this object for processing that are invalid keys. Use the
+    // isValid method to explicitly determine validity when required.
+    // if ((prv[31] & 0b00100000) != 0)
+    //     throw std::invalid_argument("Not a valid extended Ed25519 key.");
+
     std::move(
         prv.begin(), prv.begin() + ED25519_EXTENDED_KEY_SIZE, this->prv_.begin()
     );

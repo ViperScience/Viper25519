@@ -134,6 +134,10 @@ class ExtendedPrivateKey
     /// Private key byte array (unencrypted)
     ExtKeyByteArray prv_;
 
+    /// Make the default constructor private so that it can only be used
+    /// internally.
+    ExtendedPrivateKey() = default;
+
   public:
     ExtendedPrivateKey(std::span<const uint8_t> prv);
 
