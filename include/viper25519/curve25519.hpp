@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef _VIPER25519_CURVE25519_HPP_
-#define _VIPER25519_CURVE25519_HPP_
+#ifndef VIPER25519_CURVE25519_HPP_
+#define VIPER25519_CURVE25519_HPP_
 
 #include <array>
 #include <cstdint>
@@ -57,7 +57,7 @@ struct bignum25519 : public std::array<uint64_t, 5>
     static auto contract(const bignum25519 &input) -> std::array<uint8_t, 32>;
 
     /// @brief returns out = a + b
-    constexpr auto add(bignum25519 const &rhs) const -> bignum25519
+    [[nodiscard]] constexpr auto add(bignum25519 const &rhs) const -> bignum25519
     {
         auto out = *this;
         for (size_t i = 0; i < this->size(); ++i) out[i] += rhs[i];
@@ -69,33 +69,33 @@ struct bignum25519 : public std::array<uint64_t, 5>
         return this->add(rhs);
     }  // operator +
 
-    auto addReduce(bignum25519 const &rhs) const -> bignum25519;
+    [[nodiscard]] auto addReduce(bignum25519 const &rhs) const -> bignum25519;
 
-    auto sub(bignum25519 const &rhs) const -> bignum25519;
+    [[nodiscard]] auto sub(bignum25519 const &rhs) const -> bignum25519;
 
     auto operator-(bignum25519 const &rhs) const -> bignum25519;
 
-    auto subReduce(bignum25519 const &rhs) const -> bignum25519;
+    [[nodiscard]] auto subReduce(bignum25519 const &rhs) const -> bignum25519;
 
-    auto subAfterBasic(bignum25519 const &rhs) const -> bignum25519;
+    [[nodiscard]] auto subAfterBasic(bignum25519 const &rhs) const -> bignum25519;
 
-    auto neg() const -> bignum25519;
+    [[nodiscard]] auto neg() const -> bignum25519;
 
-    auto mul(bignum25519 const &rhs) const -> bignum25519;
+    [[nodiscard]] auto mul(bignum25519 const &rhs) const -> bignum25519;
 
     auto operator*(bignum25519 const &rhs) const -> bignum25519;
 
-    auto square() const -> bignum25519;
+    [[nodiscard]] auto square() const -> bignum25519;
 
-    auto squareTimes(uint64_t count) const -> bignum25519;
+    [[nodiscard]] auto squareTimes(uint64_t count) const -> bignum25519;
 
-    auto pow_two252m3() const -> bignum25519;
+    [[nodiscard]] auto pow_two252m3() const -> bignum25519;
 
     // In:  b =   2^5 - 2^0
     // Out: b = 2^250 - 2^0
-    auto pow_two5mtwo0_two250mtwo0() const -> bignum25519;
+    [[nodiscard]] auto pow_two5mtwo0_two250mtwo0() const -> bignum25519;
 
-    auto recip() const -> bignum25519;
+    [[nodiscard]] auto recip() const -> bignum25519;
 
     //////////////////////////////////////////////////////////////////////////////
     //
@@ -156,22 +156,22 @@ class PartialPoint
     {
     }
     [[nodiscard]] explicit PartialPoint(std::array<bignum25519, 3> a)
-        : data_{std::move(a)}
+        : data_{a}
     {
     }
 
     // Overloading [] operator to access elements in array style
     auto operator[](size_t index) const -> bignum25519;
 
-    auto x() const -> bignum25519 { return data_[0]; }
-    auto y() const -> bignum25519 { return data_[1]; }
-    auto z() const -> bignum25519 { return data_[2]; }
+    [[nodiscard]] auto x() const -> bignum25519 { return data_[0]; }
+    [[nodiscard]] auto y() const -> bignum25519 { return data_[1]; }
+    [[nodiscard]] auto z() const -> bignum25519 { return data_[2]; }
 
-    auto doubleCompleted() const -> CompletedPoint;
+    [[nodiscard]] auto doubleCompleted() const -> CompletedPoint;
 
-    auto doubleExtended() const -> ExtendedPoint;
+    [[nodiscard]] auto doubleExtended() const -> ExtendedPoint;
 
-    auto doublePartial() const -> PartialPoint;
+    [[nodiscard]] auto doublePartial() const -> PartialPoint;
 
 };  // class PartialPoint
 
@@ -190,13 +190,13 @@ class PrecomputedPoint
     {
     }
     [[nodiscard]] explicit PrecomputedPoint(std::array<bignum25519, 3> a)
-        : data_{std::move(a)}
+        : data_{a}
     {
     }
 
-    auto xaddy() const -> bignum25519 { return data_[0]; }
-    auto ysubx() const -> bignum25519 { return data_[1]; }
-    auto t2d() const -> bignum25519 { return data_[2]; }
+    [[nodiscard]] auto xaddy() const -> bignum25519 { return data_[0]; }
+    [[nodiscard]] auto ysubx() const -> bignum25519 { return data_[1]; }
+    [[nodiscard]] auto t2d() const -> bignum25519 { return data_[2]; }
 
     // Overloading [] operator to access elements in array style
     auto operator[](size_t index) const -> bignum25519;
@@ -233,14 +233,14 @@ class ExtendedPrecomputedPoint
     }
     [[nodiscard]] explicit ExtendedPrecomputedPoint(std::array<bignum25519, 4> a
     )
-        : data_{std::move(a)}
+        : data_{a}
     {
     }
 
-    auto xaddy() const -> bignum25519 { return data_[0]; }
-    auto ysubx() const -> bignum25519 { return data_[1]; }
-    auto z() const -> bignum25519 { return data_[2]; }
-    auto t2d() const -> bignum25519 { return data_[3]; }
+    [[nodiscard]] auto xaddy() const -> bignum25519 { return data_[0]; }
+    [[nodiscard]] auto ysubx() const -> bignum25519 { return data_[1]; }
+    [[nodiscard]] auto z() const -> bignum25519 { return data_[2]; }
+    [[nodiscard]] auto t2d() const -> bignum25519 { return data_[3]; }
 
     // Overloading [] operator to access elements in array style
     auto operator[](size_t index) const -> bignum25519;
@@ -279,7 +279,7 @@ class CompletedPoint
     {
     }
     [[nodiscard]] explicit CompletedPoint(std::array<bignum25519, 4> a)
-        : data_{std::move(a)}
+        : data_{a}
     {
     }
 
@@ -308,9 +308,9 @@ class CompletedPoint
         data_[3] = std::forward<bignum25519>(nt);
     }
 
-    auto toPartial() const -> PartialPoint;
+    [[nodiscard]] auto toPartial() const -> PartialPoint;
 
-    auto toExtended() const -> ExtendedPoint;
+    [[nodiscard]] auto toExtended() const -> ExtendedPoint;
 
 };  // class CompletedPoint
 
@@ -330,7 +330,7 @@ class ExtendedPoint
     {
     }
     [[nodiscard]] explicit ExtendedPoint(std::array<bignum25519, 4> a)
-        : data_{std::move(a)}
+        : data_{a}
     {
     }
 
@@ -400,16 +400,16 @@ class ExtendedPoint
 
     // auto toCompleted() const -> CompletedPoint;
 
-    auto toPrecomputedExtendedPoint() const -> ExtendedPrecomputedPoint;
+    [[nodiscard]] auto toPrecomputedExtendedPoint() const -> ExtendedPrecomputedPoint;
 
-    auto doubleCompleted() const -> CompletedPoint;
+    [[nodiscard]] auto doubleCompleted() const -> CompletedPoint;
 
-    auto doublePartial() const -> PartialPoint;
+    [[nodiscard]] auto doublePartial() const -> PartialPoint;
 
-    auto doubleExtended() const -> ExtendedPoint;
+    [[nodiscard]] auto doubleExtended() const -> ExtendedPoint;
 
     /// @brief Computes [s1]p1 + [s2]basepoint
-    auto doubleScalarMultiple(bignum25519 const &s1, bignum25519 const &s2)
+    [[nodiscard]] auto doubleScalarMultiple(bignum25519 const &s1, bignum25519 const &s2)
         const -> ExtendedPoint;
 
     /// @brief Computes [s]B
@@ -417,7 +417,7 @@ class ExtendedPoint
     [[nodiscard]] static auto multiplyBasepointByScalar(bignum25519 const &s)
         -> ExtendedPoint;
 
-    auto pack() const -> std::array<uint8_t, 32>;
+    [[nodiscard]] auto pack() const -> std::array<uint8_t, 32>;
 
     [[nodiscard]] static auto unpack(std::span<const uint8_t> p)
         -> ExtendedPoint;
@@ -430,4 +430,4 @@ auto scalarmult_basepoint(std::array<uint8_t, 32> pk)
 
 }  // namespace curve25519
 
-#endif  // _VIPER25519_CURVE25519_HPP_
+#endif  // VIPER25519_CURVE25519_HPP_

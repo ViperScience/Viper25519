@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef _VIPER25519_ED25519_HPP_
-#define _VIPER25519_ED25519_HPP_
+#ifndef VIPER25519_ED25519_HPP_
+#define VIPER25519_ED25519_HPP_
 
 #include <sys/mman.h>
 
@@ -58,7 +58,7 @@ class PrivateKey
   public:
     /// @brief Construct a key object from a span of key bytes.
     /// @param prv A span of 32 bytes that will be moved into the object.
-    PrivateKey(std::span<const uint8_t> prv);
+    explicit PrivateKey(std::span<const uint8_t> prv);
 
     /// @brief Return a constant reference to the private key secure byte
     /// array.
@@ -96,13 +96,13 @@ class PublicKey
   public:
     /// @brief Construct a key object from a span of key bytes.
     /// @param pub An array of 32 bytes that will be moved into the object.
-    constexpr PublicKey(std::array<uint8_t, ED25519_KEY_SIZE> pub) : pub_{pub}
+    constexpr explicit PublicKey(std::array<uint8_t, ED25519_KEY_SIZE> pub) : pub_{pub}
     {
     }
 
     /// @brief Construct a key object from a span of key bytes.
     /// @param pub A span of 32 bytes that will be moved into the object.
-    PublicKey(std::span<const uint8_t> pub);
+    explicit PublicKey(std::span<const uint8_t> pub);
 
     /// @brief Return a constant reference to the public key byte array.
     [[nodiscard]] constexpr auto bytes() const
@@ -139,7 +139,7 @@ class ExtendedPrivateKey
     ExtendedPrivateKey() = default;
 
   public:
-    ExtendedPrivateKey(std::span<const uint8_t> prv);
+    explicit ExtendedPrivateKey(std::span<const uint8_t> prv);
 
     /// @brief Return a constant reference to the private key secure byte
     /// array.
@@ -177,4 +177,4 @@ class ExtendedPrivateKey
 
 }  // namespace ed25519
 
-#endif  // _VIPER25519_ED25519_HPP_
+#endif  // VIPER25519_ED25519_HPP_

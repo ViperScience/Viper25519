@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef _VIPER_SECMEM_HPP_
-#define _VIPER_SECMEM_HPP_
+#ifndef VIPER25519_SECMEM_HPP_
+#define VIPER25519_SECMEM_HPP_
 
 #include <sys/mman.h>
 
@@ -38,12 +38,12 @@ struct SecureByteArray : public std::array<T, Size>
     );
     static_assert(sizeof(T) == 1, "Only 1-byte types allowed");
 
-    SecureByteArray(void)
+    SecureByteArray()
     {
         mlock(std::array<T, Size>::data(), sizeof(T) * Size);
     }
 
-    ~SecureByteArray(void)
+    ~SecureByteArray()
     {
         char *bytes = reinterpret_cast<char *>(std::array<T, Size>::data());
         std::fill_n<volatile char *>(bytes, sizeof(T) * Size, 0);
@@ -53,4 +53,4 @@ struct SecureByteArray : public std::array<T, Size>
 
 }  // namespace ed25519
 
-#endif  // _VIPER_SECMEM_HPP_
+#endif  // VIPER25519_SECMEM_HPP_
