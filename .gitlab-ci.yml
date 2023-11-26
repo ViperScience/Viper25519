@@ -2,7 +2,7 @@ stages:
   - build-debug
   - coverage-report
   - build-release
-  - pages
+  - build-documentation
 
 docker-build:
   image: docker:latest
@@ -50,6 +50,7 @@ release-build:
 
 pages:
   image: python:3.11-bookworm
+  stage: build-documentation
   script:
   - pip install poxy
   - apt install doxygen
