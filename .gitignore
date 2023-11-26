@@ -13,3 +13,6 @@ release
 # CLion
 .idea
 cmake-build*
+
+# Docs
+docs/html

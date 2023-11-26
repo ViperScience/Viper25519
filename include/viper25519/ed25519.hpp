@@ -30,6 +30,7 @@
 #include <vector>
 #include <viper25519/secmem.hpp>
 
+/// @brief Root namespace for the Ed25519 classes.
 namespace ed25519
 {
 
@@ -45,6 +46,7 @@ class PrivateKey;
 class PublicKey;
 class ExtendedPrivateKey;
 
+/// @brief Represent an Ed25519 private key.
 class PrivateKey
 {
   private:
@@ -87,6 +89,7 @@ class PrivateKey
 
 };  // PrivateKey
 
+/// @brief Represent an Ed25519 prublic key.
 class PublicKey
 {
   private:
@@ -128,6 +131,7 @@ class PublicKey
 
 };  // PublicKey
 
+/// @brief Represent an extended Ed25519 private key.
 class ExtendedPrivateKey
 {
   private:

@@ -1,0 +1,37 @@
+# this is a config file for Poxy - a Doxygen + m.css front-end written in Python.
+# https://github.com/marzer/poxy
+#
+# config reference: https://github.com/marzer/poxy/wiki/Configuration-options
+
+name            = 'Viper25519'
+author          = 'ViperScience LLC'
+description     = 'C++ SDK for Ed25519 Signatures'
+cpp             = 20
+gitlab          = 'viperscience/viper25519'
+license         = [ 'MIT', 'https://github.com/marzer/tomlplusplus/blob/master/LICENSE' ]
+twitter         = 'viperscience'
+show_includes   = false
+changelog       = false
+logo            = 'images/logo.png'
+favicon         = 'images/favicon.ico'
+navbar          = [ 'pages', 'namespaces', 'classes' ]
+theme           = 'dark'
+extra_files     = []
+
+[warnings]
+enabled         = true
+treat_as_errors = false
+undocumented    = true
+
+[sources]
+paths           = [ 'pages' ]
+recursive_paths = [ '../include' ]
+patterns        = [ '*.h', '*.hpp', '*.dox', '*.md' ]
+strip_paths     = [ '../include', 'pages' ]
+
+[images]
+paths           = [ 'images' ]
+
+[autolinks]
+'ed25519::Ed25519PrivateKey?'         = 'classed25519_1_1_private_key.html'
+'ed25519::Ed25519ExtendedPrivateKey?' = 'classed25519_1_1_extended_private_key.html'
