@@ -35,7 +35,7 @@ target_link_libraries(test_key_gen PRIVATE
     Threads::Threads
     OpenSSL::SSL
 )
-ADD_TEST(Key_Generation test_key_gen)
+ADD_TEST("Key Generation" test_key_gen)
 
 ########################################################################
 # Test basic signature capabilities
@@ -110,7 +110,26 @@ target_link_libraries(test_donna PRIVATE
     Threads::Threads
     OpenSSL::SSL
 )
-ADD_TEST(Ed25519_Donna_Tests test_donna)
+ADD_TEST("Ed25519 Donna Tests" test_donna)
+
+########################################################################
+# Test VRF Capabilities.
+########################################################################
+
+set(TEST_VIPER_ED25519_VRF_SOURCES
+    test_viper_ed25519_vrf.cpp
+    ${CMAKE_SOURCE_DIR}/src/vrf.cpp
+    ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
+    ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
+)
+add_executable(test_vrf ${TEST_VIPER_ED25519_VRF_SOURCES})
+target_link_libraries(test_vrf PRIVATE
+    botan::botan
+    Threads::Threads
+    OpenSSL::SSL
+    sodium::sodium
+)
+ADD_TEST("VRF Tests" test_vrf)
 
 ########################################################################
 endif()

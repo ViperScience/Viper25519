@@ -99,7 +99,8 @@ class PublicKey
   public:
     /// @brief Construct a key object from a span of key bytes.
     /// @param pub An array of 32 bytes that will be moved into the object.
-    constexpr explicit PublicKey(std::array<uint8_t, ED25519_KEY_SIZE> pub) : pub_{pub}
+    constexpr explicit PublicKey(std::array<uint8_t, ED25519_KEY_SIZE> pub)
+        : pub_{std::move(pub)}
     {
     }
 

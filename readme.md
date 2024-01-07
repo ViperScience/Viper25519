@@ -86,10 +86,10 @@ dependency installation.
     docker build -t com.viperscience.viper25519:latest .
 
 ## Dependencies
-The Viper25519 library links with Botan for SHA-512 hasing capability. Botan 
+The Viper25519 library links with Botan (2 or 3) for SHA-512 hasing capability. Botan 
 uses functionality provided by OpenSSL.
 
-* [Botan-2](https://botan.randombit.net/)
+* [Botan](https://botan.randombit.net/)
 * [OpenSSL](https://www.openssl.org/)
 
 The provided Docker file demonstrates how to install the required 

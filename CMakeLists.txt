@@ -50,6 +50,10 @@ endif()
 # Add 3rd party libraries that should be installed on the system
 find_package(Botan REQUIRED)
 
+# Add libsodium
+set(sodium_USE_STATIC_LIBS ON)
+find_package(Sodium REQUIRED)
+
 ################################################################################
 # Include directories
 ################################################################################
@@ -92,8 +96,9 @@ add_subdirectory(test)
 
 # Specify the Viper-Ed25519 source files (including submodules)
 set(VIPER25519_SOURCES
-    ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
     ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
+    ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
+    ${CMAKE_SOURCE_DIR}/src/vrf.cpp
 )
 
 # Add the library to build but do not specify STATIC vs. SHARED. A shared 
@@ -105,6 +110,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     botan::botan
     Threads::Threads
     OpenSSL::SSL
+    sodium::sodium
 )
 
 ################################################################################
