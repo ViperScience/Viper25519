@@ -20,6 +20,10 @@
 
 #include <viper25519/vrf.hpp>
 
+// Standard library headers
+#include <stdexcept>
+
+// Third-party headers
 #include "sodium.h"
 
 using namespace ed25519;
