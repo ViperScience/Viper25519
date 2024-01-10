@@ -26,6 +26,9 @@
 // Third-party headers
 #include "sodium.h"
 
+// Project headers
+#include <viper25519/curve25519.hpp>
+
 using namespace ed25519;
 
 auto VRFPublicKey::verifyProof(
@@ -49,27 +52,22 @@ VRFSecretKey::VRFSecretKey(std::span<const uint8_t> prv)
 
 auto VRFSecretKey::generate() -> VRFSecretKey
 {
-    auto seed = ed25519::PrivateKey::generate();
-    auto seed_bytes = seed.bytes();
-
-    auto pk_bytes = std::array<uint8_t, ED25519_VRF_PUBLIC_KEY_SIZE>{};
-    auto sk_bytes = std::array<uint8_t, ED25519_VRF_SECRET_KEY_SIZE>{};
-
-    crypto_vrf_seed_keypair(
-        pk_bytes.data(), sk_bytes.data(), seed_bytes.data()
-    );
-
-    return VRFSecretKey{sk_bytes};
+    const auto seed = ed25519::PrivateKey::generate();
+    const auto seed_bytes = seed.bytes();
+    return VRFSecretKey::fromSeed(seed_bytes);
 }  // VRFSecretKey::generate
 
 auto VRFSecretKey::fromSeed(std::span<const uint8_t> seed) -> VRFSecretKey
 {
-    auto pk_bytes = std::array<uint8_t, ED25519_VRF_PUBLIC_KEY_SIZE>{};
-    auto sk_bytes = std::array<uint8_t, ED25519_VRF_SECRET_KEY_SIZE>{};
-
-    crypto_vrf_seed_keypair(pk_bytes.data(), sk_bytes.data(), seed.data());
-
-    return VRFSecretKey{sk_bytes};
+    const auto seed_key = ed25519::PrivateKey(seed);
+    const auto pkey_bytes = seed_key.extend().publicKey().bytes();
+    auto skey_bytes = ed25519::ExtKeyByteArray{};
+    std::copy_n(seed.begin(), ED25519_VRF_SEED_SIZE, skey_bytes.begin());
+    std::copy_n(
+        pkey_bytes.begin(), ED25519_VRF_PUBLIC_KEY_SIZE,
+        skey_bytes.begin() + ED25519_VRF_SEED_SIZE
+    );
+    return VRFSecretKey{skey_bytes};
 }  // VRFSecretKey::fromSeed
 
 auto VRFSecretKey::publicKey() const -> VRFPublicKey
