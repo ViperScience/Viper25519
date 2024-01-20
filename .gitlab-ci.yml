@@ -52,8 +52,10 @@ pages:
   image: python:3.11-bookworm
   stage: build-documentation
   script:
+  - curl -LO https://www.doxygen.nl/files/doxygen-1.10.0.linux.bin.tar.gz
+  - tar --extract --file doxygen-1.10.0.linux.bin.tar.gz
+  - mv doxygen-1.10.0/bin/doxygen /usr/local/bin
   - pip install poxy
-  - apt-get update && apt-get install doxygen -y
   - poxy docs/poxy.toml
   - mv html/ public/
   artifacts:
