@@ -18,7 +18,7 @@ Examples of how to use these classes are demonstrated below. The examples assume
 the following to be at the top of the source file.
 
     #include <viper25519/ed25519.hpp>
-    using namespace ed25519; // the key objects exist within this namespace
+    using namespace ed25519; // key objects exist within this namespace
 
 ### Generating Keys
 
@@ -62,6 +62,35 @@ Existing keys may also be loaded into the constructors of each object as a span 
     auto key = Ed25519PrivateKey(pkey_bytes);
     auto ext_key = Ed25519ExtendedPrivateKey(ext_pkey_bytes);
 
+### Verifiable Randome Functions (VRF)
+
+VRF keys are Ed25519 keys and thus inherit functionality such as `sign` and `verifySignature`;
+however, they have been extended with the following VRF capabilities (via the Cardano fork of the libsodium library):
+* constructProof
+* verifyProof
+* proofToHash
+* hashInput
+
+    // Create an input of bytes to hash
+    auto msg = std::vector<uint8_t>();
+    // fill msg...
+
+    // Generate a VRF key pair
+    auto vrf_skey = VRFSecretKey::generate();
+    auto vrf_pkey = vrf_skey.publicKey();
+
+    // Generate the VRF proof
+    auto proof = vrf_skey.constructProof(msg);
+    
+    // Generate the VRF hash of the input
+    auto hash = vrf_skey.hashInput(msg);
+    // or
+    auto hash = vrf_skey.proofToHash(proof);
+
+    // Verify the proof given the input and public key
+    auto result vrf_pkey.verifyProof(msg, proof);
+    // result == true if proof is valid.
+
 ## Building from source
 While the primary intent of the Viper25519 library is to provide source files 
 that may be included in modern C++ projects, the code may also be complied as a 
@@ -87,14 +116,16 @@ dependency installation.
 
 ## Dependencies
 The Viper25519 library links with Botan (2 or 3) for SHA-512 hasing capability. Botan 
-uses functionality provided by OpenSSL.
+uses functionality provided by OpenSSL. VRF capability is provided by the Cardano
+fork of libsodium.
 
 * [Botan](https://botan.randombit.net/)
 * [OpenSSL](https://www.openssl.org/)
+* [libsodium](https://github.com/IntersectMBO/libsodium)
 
 The provided Docker file demonstrates how to install the required 
 dependencies prior to building the Viper25519 library in a Debian 
-environment. Additionally, a Cmake find script for Botan-2 is provided in the 
+environment. Additionally, a Cmake find scripts for Botan and libsodium are provided in the 
 [cmake folder](https://gitlab.com/viper-staking/viper25519/-/blob/main/cmake/FindBotan.cmake).
 
 ## Platform Support
