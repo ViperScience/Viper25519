@@ -19,12 +19,9 @@ typedef struct TestData_
     const char hash[2 * 64 + 1];
 } TestData;
 
-/*
- * Test data taken from
- * https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-13#appendix-A.4
- * which contains the seeds. The expected values for the pk, proof and
- * output are in vrf.exp
- */
+/// Test data taken from
+/// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-vrf-13#appendix-A.4
+/// which contains the seeds and expected values.
 static const TestData test_data[] = {
     {
         "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
