@@ -98,7 +98,7 @@ add_subdirectory(test)
 set(VIPER25519_SOURCES
     ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
     ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
-    ${CMAKE_SOURCE_DIR}/src/vrf.cpp
+    ${CMAKE_SOURCE_DIR}/src/vrf25519.cpp
 )
 
 # Add the library to build but do not specify STATIC vs. SHARED. A shared 

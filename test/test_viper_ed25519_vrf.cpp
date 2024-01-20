@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <string>
 #include <test/testing.hpp>
-#include <viper25519/vrf.hpp>
+#include <viper25519/vrf25519.hpp>
 
 using namespace ed25519;
 

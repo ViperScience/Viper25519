@@ -118,7 +118,7 @@ ADD_TEST("Ed25519 Donna Tests" test_donna)
 
 set(TEST_VIPER_ED25519_VRF_SOURCES
     test_viper_ed25519_vrf.cpp
-    ${CMAKE_SOURCE_DIR}/src/vrf.cpp
+    ${CMAKE_SOURCE_DIR}/src/vrf25519.cpp
     ${CMAKE_SOURCE_DIR}/src/ed25519.cpp
     ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
 )

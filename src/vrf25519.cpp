@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include <viper25519/vrf.hpp>
+#include <viper25519/vrf25519.hpp>
 
 // Standard library headers
 #include <stdexcept>
