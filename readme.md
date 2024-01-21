@@ -68,10 +68,13 @@ Existing keys may also be loaded into the constructors of each object as a span 
 
 VRF keys are Ed25519 keys and thus inherit functionality such as `sign` and `verifySignature`;
 however, they have been extended with the following VRF capabilities (via the Cardano fork of the libsodium library):
+
 * constructProof
 * verifyProof
 * proofToHash
 * hashInput
+
+An example usecase is demonstrated below:
 
     // Create an input of bytes to hash
     auto msg = std::vector<uint8_t>();
