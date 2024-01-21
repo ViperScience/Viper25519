@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Language](https://img.shields.io/badge/Language-C++-blue.svg)](https://gitlab.com/viper-staking/viper25519/-/graphs/main/charts)
 [![C++ Standard](https://img.shields.io/badge/std-C++20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
+![Website](https://img.shields.io/website?url=https%3A%2F%2Fviperscience.gitlab.io%2Fviper25519%2Findex.html)
+[![Catalyst](https://img.shields.io/badge/catalyst-fund10-violet)](https://cardano.ideascale.com/c/idea/106219)
 
 An implementation of the Ed25519 elliptic curve digital signature standard in
 modern C++. The library is largley based on the popular 
