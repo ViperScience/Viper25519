@@ -12,3 +12,7 @@ Thus, viper25519 links with the libsodium fork to gain the basic VRF implementat
 
 The viper25519 VRF implementation follows the libsodium implementation which deviates slightly from that defined in RFC9381. Specifically, the private key stores both the private and public key concatenated as a 64 byte vector in order to improve the efficiency of the computation.
 More details may be found in the Algorand libsodium fork [readme](https://github.com/algorand/libsodium/blob/draft-irtf-cfrg-vrf-03/src/libsodium/crypto_vrf/ietfdraft03/README).  
+
+@subsection vrf-cardano-compatibility Cardano Compatibility
+The Cardano block chain uses the IETF draft 03 version of the VRF code for stake pools keys.
+Thus, the viper25519 VRF functions call the libsodium functions prefixed with `crypto_vrf_ietfdraft03_`.

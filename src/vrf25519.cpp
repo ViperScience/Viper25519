@@ -37,7 +37,7 @@ auto VRFPublicKey::verifyProof(
 {
     unsigned char output[64];
     auto pk_bytes = this->bytes();
-    auto result = crypto_vrf_verify(
+    auto result = crypto_vrf_ietfdraft03_verify(
         output, pk_bytes.data(), proof.data(), msg.data(), msg.size()
     );
     return result == 0;
@@ -105,7 +105,7 @@ auto VRFSecretKey::constructProof(std::span<const uint8_t> msg)
     -> std::array<uint8_t, ED25519_VRF_PROOF_SIZE>
 {
     auto proof = std::array<uint8_t, ED25519_VRF_PROOF_SIZE>{};
-    auto result = crypto_vrf_prove(
+    auto result = crypto_vrf_ietfdraft03_prove(
         proof.data(), this->prv_.data(), msg.data(), msg.size()
     );
     if (result != 0)
@@ -127,7 +127,8 @@ auto VRFSecretKey::proofToHash(std::span<const uint8_t> proof)
     -> std::array<uint8_t, ED25519_VRF_PROOF_HASH_SIZE>
 {
     auto hash = std::array<uint8_t, ED25519_VRF_PROOF_HASH_SIZE>{};
-    auto result = crypto_vrf_proof_to_hash(hash.data(), proof.data());
+    auto result =
+        crypto_vrf_ietfdraft03_proof_to_hash(hash.data(), proof.data());
     if (result != 0)
     {
         throw std::runtime_error("crypto_vrf_proof_to_hash failed.");
