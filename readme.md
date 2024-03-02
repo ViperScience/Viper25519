@@ -1,6 +1,6 @@
 # Viper25519
 [![build](https://gitlab.com/viper-staking/viper25519/badges/main/pipeline.svg)](https://gitlab.com/viper-staking/viper25519/-/commits/main)
-[![codecov](https://codecov.io/gl/viper-staking/viper25519/branch/main/graph/badge.svg?token=B7F7UR16TG)](https://codecov.io/gl/viper-staking/viper25519)
+[![codecov](https://codecov.io/gl/viperscience/viper25519/branch/main/graph/badge.svg?token=B7F7UR16TG)](https://codecov.io/gl/viper-staking/viper25519)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Language](https://img.shields.io/badge/Language-C++-blue.svg)](https://gitlab.com/viper-staking/viper25519/-/graphs/main/charts)
 [![C++ Standard](https://img.shields.io/badge/std-C++20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
