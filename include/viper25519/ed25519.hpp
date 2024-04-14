@@ -21,8 +21,6 @@
 #ifndef VIPER25519_ED25519_HPP_
 #define VIPER25519_ED25519_HPP_
 
-#include <sys/mman.h>
-
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -39,6 +37,7 @@ static constexpr size_t ED25519_EXTENDED_KEY_SIZE = 64;
 static constexpr size_t ED25519_SIGNATURE_SIZE = 64;
 
 using KeyByteArray = SecureByteArray<uint8_t, ED25519_KEY_SIZE>;
+using PubKeyByteArray = std::array<uint8_t, ED25519_KEY_SIZE>;
 using ExtKeyByteArray = SecureByteArray<uint8_t, ED25519_EXTENDED_KEY_SIZE>;
 
 // Forward Declarations
@@ -51,7 +50,7 @@ class PrivateKey
 {
   private:
     /// Private key byte array (unencrypted)
-    KeyByteArray prv_;
+    KeyByteArray prv_{};
 
     /// Make the default constructor private so that it can only be used
     /// internally.
@@ -60,7 +59,9 @@ class PrivateKey
   public:
     /// @brief Construct a key object from a span of key bytes.
     /// @param prv A span of 32 bytes that will be moved into the object.
-    explicit PrivateKey(std::span<const uint8_t> prv);
+    /// @note The input may still contain a valid key after the move and must
+    /// be wiped by the calling code.
+    explicit PrivateKey(std::span<const uint8_t, ED25519_KEY_SIZE> prv);
 
     /// @brief Return a constant reference to the private key secure byte
     /// array.
@@ -94,23 +95,15 @@ class PublicKey
 {
   private:
     /// Public key byte array (unencrypted).
-    std::array<uint8_t, ED25519_KEY_SIZE> pub_{};
+    PubKeyByteArray pub_{};
 
   public:
     /// @brief Construct a key object from a span of key bytes.
-    /// @param pub An array of 32 bytes that will be moved into the object.
-    constexpr explicit PublicKey(std::array<uint8_t, ED25519_KEY_SIZE> pub)
-        : pub_{std::move(pub)}
-    {
-    }
-
-    /// @brief Construct a key object from a span of key bytes.
-    /// @param pub A span of 32 bytes that will be moved into the object.
-    explicit PublicKey(std::span<const uint8_t> pub);
+    /// @param pub An array of 32 bytes that will be copied into the object.
+    explicit PublicKey(std::span<const uint8_t, ED25519_KEY_SIZE> pub);
 
     /// @brief Return a constant reference to the public key byte array.
-    [[nodiscard]] constexpr auto bytes() const
-        -> const std::array<uint8_t, ED25519_KEY_SIZE>&
+    [[nodiscard]] constexpr auto bytes() const -> const PubKeyByteArray&
     {
         return this->pub_;
     }
@@ -119,7 +112,8 @@ class PublicKey
     /// @param msg A span of bytes (uint8_t) representing the original message.
     /// @param sig A span of 64 bytes (uint8_t) representing the signature.
     [[nodiscard]] auto verifySignature(
-        std::span<const uint8_t> msg, std::span<const uint8_t> sig
+        std::span<const uint8_t> msg,
+        std::span<const uint8_t, ED25519_SIGNATURE_SIZE> sig
     ) const -> bool;
 
     /// @brief Add two public keys as curve25519 points.
@@ -137,14 +131,20 @@ class ExtendedPrivateKey
 {
   private:
     /// Private key byte array (unencrypted)
-    ExtKeyByteArray prv_;
+    ExtKeyByteArray prv_{};
 
     /// Make the default constructor private so that it can only be used
     /// internally.
     ExtendedPrivateKey() = default;
 
   public:
-    explicit ExtendedPrivateKey(std::span<const uint8_t> prv);
+    /// @brief Construct a key object from a span of key bytes.
+    /// @param prv A span of 64 bytes that will be moved into the object.
+    /// @note The input may still contain a valid key after the move and must
+    /// be wiped by the calling code.
+    explicit ExtendedPrivateKey(
+        std::span<const uint8_t, ED25519_EXTENDED_KEY_SIZE> prv
+    );
 
     /// @brief Return a constant reference to the private key secure byte
     /// array.

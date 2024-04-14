@@ -37,11 +37,9 @@
 
 using namespace ed25519;
 
-PrivateKey::PrivateKey(std::span<const uint8_t> prv)
+PrivateKey::PrivateKey(std::span<const uint8_t, ED25519_KEY_SIZE> prv)
 {
-    if (prv.size() != ED25519_KEY_SIZE)
-        throw std::invalid_argument("Not a valid Ed25519 key.");
-    std::move(prv.begin(), prv.begin() + ED25519_KEY_SIZE, this->prv_.begin());
+    std::move(prv.begin(), prv.end(), this->prv_.begin());
 }  // PrivateKey::PrivateKey
 
 auto PrivateKey::generate() -> PrivateKey
@@ -81,7 +79,7 @@ auto PrivateKey::generate() -> PrivateKey
         n_retries++;
     } while (!skey_valid);
 
-    return PrivateKey(skey);
+    return PrivateKey(std::span(skey).first<ED25519_KEY_SIZE>());
 }  // PrivateKey::generate
 
 auto PrivateKey::isValid() const -> bool
@@ -110,7 +108,9 @@ auto PrivateKey::extend() const -> ExtendedPrivateKey
     // 32 bytes but assume this is the case for a valid Ed25519 key. The
     // generate method enforces this but we do not enforce this check here.
 
-    return ExtendedPrivateKey(keyhash);
+    return ExtendedPrivateKey(
+        std::span(keyhash).first<ED25519_EXTENDED_KEY_SIZE>()
+    );
 }  // PrivateKey::extend
 
 auto PrivateKey::publicKey() const -> PublicKey
@@ -126,20 +126,16 @@ auto PrivateKey::sign(std::span<const uint8_t> msg) const
     return ext_key.sign(msg);
 }  // PrivateKey::sign
 
-PublicKey::PublicKey(std::span<const uint8_t> pub)
+PublicKey::PublicKey(std::span<const uint8_t, ED25519_KEY_SIZE> pub)
 {
-    if (pub.size() != ED25519_KEY_SIZE)
-        throw std::invalid_argument("Not a valid Ed25519 key.");
-    std::move(pub.begin(), pub.begin() + ED25519_KEY_SIZE, this->pub_.begin());
+    std::copy_n(pub.begin(), ED25519_KEY_SIZE, this->pub_.begin());
 }  // PublicKey::PublicKey
 
 auto PublicKey::verifySignature(
-    std::span<const uint8_t> msg, std::span<const uint8_t> sig
+    std::span<const uint8_t> msg,
+    std::span<const uint8_t, ED25519_SIGNATURE_SIZE> sig
 ) const -> bool
 {
-    if (sig.size() != ED25519_SIGNATURE_SIZE)
-        throw std::invalid_argument("Invalid signature size.");
-
     if (sig[63] & 224) throw std::invalid_argument("Invalid signature.");
 
     // This may also throw an exception
@@ -179,20 +175,17 @@ auto PublicKey::pointAdd(const PublicKey& rhs) const -> PublicKey
     return PublicKey(res);
 }  // PublicKey::pointAdd
 
-ExtendedPrivateKey::ExtendedPrivateKey(std::span<const uint8_t> prv)
+ExtendedPrivateKey::ExtendedPrivateKey(
+    std::span<const uint8_t, ED25519_EXTENDED_KEY_SIZE> prv
+)
 {
-    if (prv.size() != ED25519_EXTENDED_KEY_SIZE)
-        throw std::invalid_argument("Not a valid extended Ed25519 key.");
-    
     // Do not check for validity here since sometimes byte arrays may be run
     // through this object for processing that are invalid keys. Use the
     // isValid method to explicitly determine validity when required.
     // if ((prv[31] & 0b00100000) != 0)
     //     throw std::invalid_argument("Not a valid extended Ed25519 key.");
 
-    std::move(
-        prv.begin(), prv.begin() + ED25519_EXTENDED_KEY_SIZE, this->prv_.begin()
-    );
+    std::move(prv.begin(), prv.end(), this->prv_.begin());
 }  // ExtendedPrivateKey::ExtendedPrivateKey
 
 auto ExtendedPrivateKey::generate() -> ExtendedPrivateKey
