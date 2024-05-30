@@ -134,10 +134,11 @@ environment. Additionally, a Cmake find scripts for Botan and libsodium are prov
 [cmake folder](https://gitlab.com/viper-staking/viper25519/-/blob/main/cmake/FindBotan.cmake).
 
 ## Platform Support
-
 This library currently supports 64-bit Unix platforms only.
 
-## Related Projects
+## Disclaimer
+This library has not been audited. Use at your own risk.
 
+## Related Projects
 The Viper25519 library was originally started as part of the 
 [libcardano](https://gitlab.com/viper-staking/libcardano) project.

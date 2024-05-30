@@ -52,8 +52,9 @@ class PrivateKey
     /// Private key byte array (unencrypted)
     KeyByteArray prv_{};
 
-    /// Make the default constructor private so that it can only be used
-    /// internally.
+  protected:
+    /// Make the default constructor protected so that it can only be used
+    /// internally. The key will be all zeros.
     PrivateKey() = default;
 
   public:
