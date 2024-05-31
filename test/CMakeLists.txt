@@ -68,8 +68,8 @@ set(TEST_VIPER_ED25519_VRF_SOURCES
     ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
 )
 add_executable(test_vrf ${TEST_VIPER_ED25519_VRF_SOURCES})
-target_link_libraries(test_vrf PRIVATE ${VIPER25519_LINK_LIBS} sodium::sodium)
-ADD_TEST("VRF Tests" test_vrf)
+target_link_libraries(test_vrf PRIVATE ${VIPER25519_LINK_LIBS})
+ADD_TEST("Viper25519 VRF API" test_vrf)
 
 # #######################################################################
 # Test the KES API
@@ -81,7 +81,7 @@ add_executable(test_kes
     ${CMAKE_SOURCE_DIR}/src/curve25519.cpp
 )
 target_link_libraries(test_kes PRIVATE ${VIPER25519_LINK_LIBS} Catch2::Catch2WithMain)
-ADD_TEST("KES Tests" test_kes)
+ADD_TEST("Viper25519 KES API" test_kes)
 
 # #######################################################################
 # Run all individual tests for debugging scenarios

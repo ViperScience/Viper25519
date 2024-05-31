@@ -72,10 +72,10 @@ inline auto u32_to_be(uint32_t value) -> std::array<uint8_t, 4>
 // Consider the following Merkle tree:
 //
 // ```ascii
-//       (A)
-//      /   \
+//        (A)
+//      /    |
 //   (B)     (C)
-//   / \     / \
+//   / \     / |
 // (D) (E) (F) (G)
 //      ^
 //  0   1   2   3

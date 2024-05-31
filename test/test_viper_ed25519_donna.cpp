@@ -3,16 +3,18 @@
 
 #include <viper25519/curve25519.hpp>
 #include <viper25519/ed25519.hpp>
-#include <test/testing.hpp>
+
+#include "testing.hpp"
 
 auto testBasepoint() -> void
 {
     // result of the curve25519 scalarmult ((|255| * basepoint) * basepoint)...
     // 1024 times
-    static constexpr auto curved25519_expected = std::array<uint8_t, 32>{
-        0xac, 0xce, 0x24, 0xb1, 0xd4, 0xa2, 0x36, 0x21, 0x15, 0xe2, 0x3e,
-        0x84, 0x3c, 0x23, 0x2b, 0x5f, 0x95, 0x6c, 0xc0, 0x7b, 0x95, 0x82,
-        0xd7, 0x93, 0xd5, 0x19, 0xb6, 0xf1, 0xfb, 0x96, 0xd6, 0x04};
+    static constexpr auto curved25519_expected =
+        std::array<uint8_t, 32>{0xac, 0xce, 0x24, 0xb1, 0xd4, 0xa2, 0x36, 0x21,
+                                0x15, 0xe2, 0x3e, 0x84, 0x3c, 0x23, 0x2b, 0x5f,
+                                0x95, 0x6c, 0xc0, 0x7b, 0x95, 0x82, 0xd7, 0x93,
+                                0xd5, 0x19, 0xb6, 0xf1, 0xfb, 0x96, 0xd6, 0x04};
 
     auto csk = std::array<std::array<uint8_t, 32>, 2>{{{255}}};
 
@@ -36,7 +38,8 @@ auto testAdvanced() -> void
 
     for (auto i = 0UL; i < 1024; i++)
     {
-        auto sk = ed25519::PrivateKey({dataset[i].sk, 32});
+        auto seed = std::span<uint8_t>(dataset[i].sk, 32);
+        auto sk = ed25519::PrivateKey(seed.first<32>());
         auto pk = sk.publicKey();
 
         // Not all the keys in the regression tests are valid according to this
@@ -52,7 +55,8 @@ auto testAdvanced() -> void
 
         // Sign the message
         auto msg = std::span<const uint8_t>{
-            reinterpret_cast<const uint8_t *>(dataset[i].m), i};
+            reinterpret_cast<const uint8_t *>(dataset[i].m), i
+        };
         auto sig = sk.sign(msg);
 
         // Verify the message signature

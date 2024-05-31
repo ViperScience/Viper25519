@@ -118,6 +118,14 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 #     )
 # endif()
 
+if(MSVC)
+    # target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        # -Wall # -Wextra -Wpedantic -Wshadow -Wconversion
+    )
+endif()
+
 ################################################################################
 # Link
 ################################################################################
