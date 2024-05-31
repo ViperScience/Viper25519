@@ -32,39 +32,16 @@
 namespace ed25519
 {
 
-/// Zero the contents of a span.
-template <typename T>
-auto secure_zero(std::span<T> input) -> void
-{
-    sodium_memzero(input.data(), input.size() * sizeof(T));
-}
-
-/// Copy and zero the contents of a span to an array.
-template <typename T, std::size_t N>
-auto copy_and_zero(std::span<T> input, std::array<T, N>& output) -> void
-{
-    static_assert(
-        N >= input.size(),
-        "Output array must be at least as large as the input span"
-    );
-
-    // Copy the contents from the input span to the output array
-    std::memcpy(output.data(), input.data(), input.size() * sizeof(T));
-
-    // Write zeros back to the input span
-    sodium_memzero(input.data(), input.size() * sizeof(T));
-}
-
-/// Convert unsigned integer to Big Endian byte array.
-constexpr auto to_be_bytes(uint64_t x) -> std::array<uint8_t, 8>
-{
-    std::array<uint8_t, 8> bytes;
-    for (size_t i = 0; i < 8; ++i)
-    {
-        bytes[i] = (x >> (8 * i)) & 0xFF;
-    }
-    return bytes;
-}  // to_be_bytes
+// /// Convert unsigned integer to Big Endian byte array.
+// constexpr auto to_be_bytes(uint64_t x) -> std::array<uint8_t, 8>
+// {
+//     std::array<uint8_t, 8> bytes;
+//     for (size_t i = 0; i < 8; ++i)
+//     {
+//         bytes[i] = (x >> (8 * i)) & 0xFF;
+//     }
+//     return bytes;
+// }  // to_be_bytes
 
 /// Convert unsigned integer to Little Endian byte array.
 

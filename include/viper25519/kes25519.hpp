@@ -174,8 +174,8 @@ struct KesSeed
     /// overwrites the input with zeros.
     /// @param bytes 32 byte seed (size enforced at compile time).
     /// @return A pair of 32 byte secure arrays.
-    static auto split(std::span<uint8_t, KesSeed::size> bytes)
-        -> std::pair<SeedByteArray, SeedByteArray>;
+    static auto split(std::span<uint8_t, KesSeed::size> bytes
+    ) -> std::pair<SeedByteArray, SeedByteArray>;
 };  // KesSeed
 
 class KesPublicKey : public PublicKey
@@ -206,7 +206,7 @@ class SumKesPrivateKey
     static constexpr size_t size =
         INDIVIDUAL_SECRET_SIZE + Depth * (32 + (PUBLIC_KEY_SIZE * 2));
 
-    SumKesPrivateKey<Depth>() = delete;
+    // SumKesPrivateKey<Depth>() = delete;
 
     /// @brief Construct a KES key object from a span of key bytes.
     /// @param bytes A span of bytes that will be moved into the object.
@@ -318,7 +318,7 @@ class SumKesPrivateKey
             {
                 throw std::runtime_error("Input size is incorrect.");
             }
-            const auto seed = std::span(
+            const auto seed = std::span<uint8_t>(
                 in_buffer.data() + SumKesPrivateKey<0>::size, KesSeed::size
             );
             auto sk = PrivateKey(seed.first<KesSeed::size>());
@@ -364,7 +364,7 @@ class SumKesPrivateKey
                     throw std::runtime_error("Invalid buffer size.");
                 }
 
-                auto buf_seed = std::span(
+                const auto buf_seed = std::span<uint8_t>(
                     in_buffer.data() + SumKesPrivateKey<Depth>::size,
                     KesSeed::size
                 );
@@ -458,8 +458,8 @@ class SumKesPrivateKey
     /// @brief Generate a message signature from the private key.
     /// @param msg A span of bytes (uint8_t) representing the message to
     /// sign.
-    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
-        -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg
+    ) const -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
         requires KesDepth0<Depth>
     {
         const auto skey = [&]() -> PrivateKey
