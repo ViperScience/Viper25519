@@ -153,14 +153,14 @@ struct KesDepth
 
     /// Compute the total number of signatures one can generate with the given
     /// `KesDepth`
-    auto total() const -> uint32_t
+    constexpr auto total() const -> uint32_t
     {
         return static_cast<uint32_t>(::lround(::pow(2, this->value)));
     }
 
     /// Compute half of the total number of signatures one can generate with the
     /// given `KesDepth`
-    constexpr auto half() -> uint32_t
+    constexpr auto half() const -> uint32_t
     {
         if (this->value <= 0) throw std::runtime_error("KES depth 0");
         return static_cast<uint32_t>(::lround(::pow(2, this->value - 1)));
@@ -217,9 +217,6 @@ template <size_t Depth>
 class SumKesPrivateKey
 {
   public:
-    // Depth of the key binary tree
-    static constexpr size_t depth = Depth;
-
     /// Size of the secret key in bytes.
     static constexpr size_t size =
         INDIVIDUAL_SECRET_SIZE + Depth * (32 + (PUBLIC_KEY_SIZE * 2));
@@ -242,6 +239,7 @@ class SumKesPrivateKey
         }
         std::move(bytes.begin(), bytes.end(), this->prv_.begin());
     }  // SumKesPrivateKey<Depth>::SumKesPrivateKey<Depth>
+    // need to make one that takes size only bytes and a period int
 
     /// @brief Key generation.
     /// @param key_buffer A buffer of size `SumKesPrivateKey<Depth>::size` plus
@@ -312,7 +310,7 @@ class SumKesPrivateKey
         return {SumKesPrivateKey<Depth>(key_buffer), pk};
     }
 
-    [[nodiscard]] static auto keygen_buffer(
+    static auto keygen_buffer(
         std::span<uint8_t> in_buffer,
         std::optional<std::span<uint8_t, KesSeed::size>> op_seed
     ) -> KesPublicKey
@@ -352,7 +350,7 @@ class SumKesPrivateKey
         return KesPublicKey(public_key.bytes());
     }  // keygen_buffer
 
-    [[nodiscard]] static auto keygen_buffer(
+    static auto keygen_buffer(
         std::span<uint8_t> in_buffer,
         std::optional<std::span<uint8_t, KesSeed::size>> op_seed
     ) -> KesPublicKey
@@ -459,15 +457,79 @@ class SumKesPrivateKey
         return this->prv_;
     }
 
+    static auto update_buffer(std::span<uint8_t> key_slice, uint32_t period)
+        -> void
+        requires KesDepth0<Depth>
+    {
+        throw std::runtime_error(
+            "The key cannot be furhter updated (the period has reached the "
+            "maximum allowed)"
+        );
+    }
+
+    static auto update_buffer(std::span<uint8_t> key_slice, uint32_t period)
+        -> void
+        requires KesDepthN0<Depth>
+    {
+        const auto depth = KesDepth(Depth);
+        const auto next_period = period + 1;
+
+        if (next_period == depth.total())
+        {
+            throw std::runtime_error(
+                "The key cannot be furhter updated (the period has reached the "
+                "maximum allowed)"
+            );
+        }
+
+        if (next_period < depth.half())
+        {
+            SumKesPrivateKey<Depth - 1>::update_buffer(
+                key_slice.first<SumKesPrivateKey<Depth - 1>::size>(), period
+            );
+        }
+        else if (next_period == depth.half())
+        {
+            SumKesPrivateKey<Depth - 1>::keygen_buffer(
+                key_slice.first<
+                    SumKesPrivateKey<Depth - 1>::size + INDIVIDUAL_SECRET_SIZE>(
+                ),
+                std::nullopt
+            );
+        }
+        else if (next_period > depth.half())
+        {
+            SumKesPrivateKey<Depth - 1>::update_buffer(
+                key_slice.first<SumKesPrivateKey<Depth - 1>::size>(),
+                period - depth.half()
+            );
+        }
+    }  // update_buffer
+
     auto update() -> void
         requires KesDepth0<Depth>
     {
         throw std::runtime_error(
-            "The key cannot be updated (the period has reached the allowed "
-            "threshold"
+            "The key cannot be furhter updated (the period has reached the "
+            "maximum allowed)"
         );
-    }
+    }  // update
 
+    /// @brief Update the key to the next period.
+    /// @note This function mutates the key object.
+    auto update() -> void
+        requires KesDepthN0<Depth>
+    {
+        const auto current_period = this->period();
+        SumKesPrivateKey<Depth>::update_buffer(this->prv_, current_period);
+        this->period_ = current_period + 1;  // use only this in the future
+        std::copy_n(                         // get rid of this eventually
+            u32_to_be(current_period + 1).data(), 4,
+            this->prv_.data() + SumKesPrivateKey<Depth>::size
+        );
+    }  // update
+
+    /// @brief Return the current period of the secret key.
     [[nodiscard]] auto period() -> size_t
         requires KesDepth0<Depth>
     {
@@ -504,6 +566,8 @@ class SumKesPrivateKey
 
   private:
     SecureByteArray<uint8_t, size + 4> prv_;
+    uint32_t period_ = 0;
+    KesDepth depth_ = KesDepth(Depth);
 
 };  // SumKesPrivateKey
 

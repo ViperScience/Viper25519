@@ -9,8 +9,8 @@ TEST_CASE("test_viper_ed25519_kes")
     SECTION("SumKesKey_Depth0")
     {
         auto [skey, pkey] = SumKesPrivateKey<0>::generate();
-        CHECK(skey.period() == 0);
-        CHECK_THROWS(skey.update());
+        REQUIRE(skey.period() == 0);
+        REQUIRE_THROWS(skey.update());
     }
 
     SECTION("CompactSumKesKey_")
@@ -23,7 +23,7 @@ TEST_CASE("test_viper_ed25519_kes")
     SECTION("SumKesKey_Depth1")
     {
         auto [skey, pkey] = SumKesPrivateKey<1>::generate();
-        CHECK(skey.period() == 0);
+        REQUIRE(skey.period() == 0);
 
         constexpr auto dummy_message = "tilin";
 
@@ -37,10 +37,12 @@ TEST_CASE("test_viper_ed25519_kes")
         // CHECK(key.period() == 0);
         // CHECK_THROWS(key.update());
 
-        auto z = std::array<uint8_t, SumKesPrivateKey<1>::size + 4>{};
+        REQUIRE_NOTHROW(skey.update());
+        REQUIRE_THROWS(skey.update());
 
         skey.drop();
-        CHECK(skey.bytes() == z);
+        auto z = std::array<uint8_t, SumKesPrivateKey<1>::size + 4>{};
+        REQUIRE(skey.bytes() == z);
     }
 
     //         fn buff_single() {
