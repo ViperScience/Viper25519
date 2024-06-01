@@ -6,28 +6,23 @@ using namespace ed25519;
 
 TEST_CASE("test_viper_ed25519_kes")
 {
-    SECTION("Sum0KesPrivateKey")
+    SECTION("SumKesKey_Depth0")
     {
-        // auto key = SumKesPrivateKey<0>::generate();
-        // CHECK(key.period() == 0);
-        // CHECK_THROWS(key.update());
+        auto [skey, pkey] = SumKesPrivateKey<0>::generate();
+        CHECK(skey.period() == 0);
+        CHECK_THROWS(skey.update());
     }
 
-    SECTION("Sum0CompactKesPrivateKey")
+    SECTION("CompactSumKesKey_")
     {
         // auto key = ed25519::Sum0CompactKesPrivateKey::generate();
         // CHECK(key.period() == 0);
         // CHECK_THROWS(key.update());
     }
 
-    SECTION("buff_single")
+    SECTION("SumKesKey_Depth1")
     {
-        auto skey_buffer =
-            SecureByteArray<uint8_t, SumKesPrivateKey<1>::size + 4>{};
-        auto seed_buffer = SecureByteArray<uint8_t, KesSeed::size>{};
-
-        auto [skey, pkey] =
-            SumKesPrivateKey<1>::keygen(skey_buffer, seed_buffer);
+        auto [skey, pkey] = SumKesPrivateKey<1>::generate();
 
         constexpr auto dummy_message = "tilin";
 
@@ -43,7 +38,8 @@ TEST_CASE("test_viper_ed25519_kes")
 
         auto z = std::array<uint8_t, SumKesPrivateKey<1>::size + 4>{};
 
-        CHECK(skey.bytes() == skey_buffer);
+        skey.drop();
+        CHECK(skey.bytes() == z);
     }
 
     //         fn buff_single() {

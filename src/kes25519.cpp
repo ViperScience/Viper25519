@@ -29,27 +29,44 @@
 
 using namespace ed25519;
 
-auto KesSeed::split(std::span<uint8_t, KesSeed::size> bytes)
-    -> std::pair<SeedByteArray, SeedByteArray>
+auto KesSeed::split(
+    std::span<uint8_t, KesSeed::size> seed,
+    std::span<uint8_t, KesSeed::size> left_split,
+    std::span<uint8_t, KesSeed::size> right_split
+) -> void
 {
-    auto left_seed = SecureByteArray<uint8_t, 32>{};
-    auto right_seed = SecureByteArray<uint8_t, 32>{};
-
     static constexpr auto one = std::array<uint8_t, 1>{1};
     static constexpr auto two = std::array<uint8_t, 1>{2};
 
     const auto hasher = Botan::HashFunction::create("Blake2b(256)");
     hasher->update(one.data(), one.size());
-    hasher->update(bytes.data(), bytes.size());
-    hasher->final(left_seed.data());  // Hasher is reset here
+    hasher->update(seed.data(), seed.size());
+    hasher->final(left_split.data());  // Hasher is reset here
     hasher->update(two.data(), two.size());
-    hasher->update(bytes.data(), bytes.size());
-    hasher->final(right_seed.data());
+    hasher->update(seed.data(), seed.size());
+    hasher->final(right_split.data());
 
-    Botan::secure_scrub_memory(bytes.data(), bytes.size());
-
-    return std::make_pair(left_seed, right_seed);
+    Botan::secure_scrub_memory(seed.data(), seed.size());
 }  // KesSeed::split
+
+// auto KesSeed::split(std::span<uint8_t, KesSeed::size> bytes
+// ) -> std::pair<Botan::SecureVector<uint8_t>, Botan::SecureVector<uint8_t>>
+// {
+//     static constexpr auto one = std::array<uint8_t, 1>{1};
+//     static constexpr auto two = std::array<uint8_t, 1>{2};
+
+//     const auto hasher = Botan::HashFunction::create("Blake2b(256)");
+//     hasher->update(one.data(), one.size());
+//     hasher->update(bytes.data(), bytes.size());
+//     auto left_seed = hasher->final();  // Hasher is reset here
+//     hasher->update(two.data(), two.size());
+//     hasher->update(bytes.data(), bytes.size());
+//     auto right_seed = hasher->final();
+
+//     Botan::secure_scrub_memory(bytes.data(), bytes.size());
+
+//     return {left_seed, right_seed};
+// }  // KesSeed::split
 
 auto KesPublicKey::hash_pair(const KesPublicKey& other) const -> KesPublicKey
 {

@@ -172,10 +172,16 @@ struct KesSeed
 
     /// Function that takes as input a mutable span, splits it into two, and
     /// overwrites the input with zeros.
-    /// @param bytes 32 byte seed (size enforced at compile time).
+    /// @param seed 32 byte seed (size enforced at compile time).
+    /// @param left_split Span of 32 bytes to be filled with the first split.
+    /// @param right_split Span of 32 bytes to be filled with the second split.
     /// @return A pair of 32 byte secure arrays.
-    static auto split(std::span<uint8_t, KesSeed::size> bytes
-    ) -> std::pair<SeedByteArray, SeedByteArray>;
+    static auto split(
+        std::span<uint8_t, KesSeed::size> seed,
+        std::span<uint8_t, KesSeed::size> left_split,
+        std::span<uint8_t, KesSeed::size> right_split
+    ) -> void;
+
 };  // KesSeed
 
 class KesPublicKey : public PublicKey
@@ -341,36 +347,35 @@ class SumKesPrivateKey
         requires KesDepthN0<Depth>
     {
         // Split the seed
-        auto [r0, seed] = [&]()
+        auto r0 = SeedByteArray();
+        auto seed = SeedByteArray();
+
+        if (op_seed.has_value())
         {
-            if (op_seed.has_value())
+            if (in_buffer.size() != SumKesPrivateKey<Depth>::size)
             {
-                if (in_buffer.size() != SumKesPrivateKey<Depth>::size)
-                {
-                    throw std::runtime_error("Invalid buffer size.");
-                }
-                if ((*op_seed).size() != KesSeed::size)
-                {
-                    throw std::runtime_error("Invalid input seed size.");
-                }
-
-                return KesSeed::split(*op_seed);
+                throw std::runtime_error("Invalid buffer size.");
             }
-            else
+            if ((*op_seed).size() != KesSeed::size)
             {
-                if (in_buffer.size() !=
-                    (SumKesPrivateKey<Depth>::size + KesSeed::size))
-                {
-                    throw std::runtime_error("Invalid buffer size.");
-                }
-
-                const auto buf_seed = std::span<uint8_t>(
-                    in_buffer.data() + SumKesPrivateKey<Depth>::size,
-                    KesSeed::size
-                );
-                return KesSeed::split(buf_seed.first<KesSeed::size>());
+                throw std::runtime_error("Invalid input seed size.");
             }
-        }();
+
+            KesSeed::split(*op_seed, r0, seed);
+        }
+        else
+        {
+            if (in_buffer.size() !=
+                (SumKesPrivateKey<Depth>::size + KesSeed::size))
+            {
+                throw std::runtime_error("Invalid buffer size.");
+            }
+
+            const auto buf_seed = std::span<uint8_t>(
+                in_buffer.data() + SumKesPrivateKey<Depth>::size, KesSeed::size
+            );
+            KesSeed::split(buf_seed.first<KesSeed::size>(), r0, seed);
+        }
 
         // We copy the seed before overwriting with zeros (in the `keygen`
         // call).
@@ -404,33 +409,35 @@ class SumKesPrivateKey
         return pk_0.hash_pair(pk_1);
     }  // keygen_buffer
 
-    /// Factory method to create a new Ed25519 private key from a
+    /// Factory method to create a new set of KES keys from a
     /// cryptographically secure random number generator.
-    // [[nodiscard]] static auto generate() -> Sum0KesPrivateKey
-    // {
-    //     auto key = PrivateKey::generate();
-    //     return Sum0KesPrivateKey(key.bytes());
-    // }
-
-    /// @brief Key generation - use an RNG to generate a random seed.
     /// @return A pair of the private key and the public key.
-    // static auto generate() -> std::pair<SumKesPrivateKey<Depth>,
-    // KesPublicKey>
-    // {
-    //     auto seed = PrivateKey::generate().bytes();
-    //     return generate(seed);
-    // }
+    [[nodiscard]] static auto generate()
+        -> std::pair<SumKesPrivateKey<Depth>, KesPublicKey>
+    {
+        // Create a seed from an Ed25519 private key.
+        // The private key will securely clean up when it is deallocated. We
+        // need to make a mutable copy to pass to the key generation function.
+        // Use a secure array so that the seed cannot be leaked.
+        const auto key = PrivateKey::generate();
+        const auto seed = key.bytes();
+        auto mut_seed = SeedByteArray();
+        std::copy_n(seed.begin(), seed.size(), mut_seed.begin());
 
-    // static auto generate() -> std::pair<SumKesPrivateKey<Depth>,
-    // KesPublicKey>
-    // {
-    //     auto skey = SumKesPrivateKey<Depth>();
-    //     auto vkey = skey.publicKey();
-    //     return std::make_pair(skey, vkey);
-    // }
+        // Provide a mutable buffer that will be filled with the KES key
+        // components. Use a secure array so that it is securely wiped after key
+        // generation.
+        auto mut_buffer =
+            SecureByteArray<uint8_t, SumKesPrivateKey<Depth>::size + 4>();
+
+        return SumKesPrivateKey<Depth>::keygen(mut_buffer, mut_seed);
+    }  // generate
 
     /// @brief Zero out the private key.
-    auto drop() -> void { secure_zero(this->prv_); }
+    auto drop() -> void
+    {
+        Botan::secure_scrub_memory(this->prv_.data(), this->prv_.size());
+    }  // drop
 
     /// @brief Return a constant reference to the private key secure byte
     /// array.
