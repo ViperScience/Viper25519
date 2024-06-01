@@ -48,7 +48,7 @@ inline auto u32_to_be(uint32_t value) -> std::array<uint8_t, 4>
     std::array<uint8_t, 4> bytes;
     bytes[0] = static_cast<uint8_t>((value >> 24) & 0xFF);
     bytes[1] = static_cast<uint8_t>((value >> 16) & 0xFF);
-    bytes[2] = static_cast<uint8_t>((value >> 0) & 0xFF);
+    bytes[2] = static_cast<uint8_t>((value >> 8) & 0xFF);
     bytes[3] = static_cast<uint8_t>(value & 0xFF);
     return bytes;
 }
@@ -60,7 +60,10 @@ inline auto be_to_u32(std::span<const uint8_t> bytes) -> uint32_t
     {
         throw std::invalid_argument("bytes must be of length 4");
     }
-    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+    return (static_cast<uint32_t>(bytes[0]) << 24) |
+           (static_cast<uint32_t>(bytes[1]) << 16) |
+           (static_cast<uint32_t>(bytes[2]) << 8) |
+           static_cast<uint32_t>(bytes[3]);
 }
 
 // Function to convert a 64 bit integer to 8 bytes using Big Endian.
@@ -398,8 +401,9 @@ class SumKesPrivateKey
         auto temp_buffer =
             SecureByteArray<uint8_t, SumKesPrivateKey<Depth - 1>::size + 4>{};
 
-        const auto pk_0 =
-            SumKesPrivateKey<Depth - 1>::keygen_buffer(in_buffer, r0);
+        const auto pk_0 = SumKesPrivateKey<Depth - 1>::keygen_buffer(
+            in_buffer.first<SumKesPrivateKey<Depth - 1>::size>(), r0
+        );
         const auto keys =
             SumKesPrivateKey<Depth - 1>::keygen(temp_buffer, seed);
         const auto pk_1 = keys.second;
@@ -551,8 +555,8 @@ class SumKesPrivateKey
     /// @brief Generate a message signature from the private key.
     /// @param msg A span of bytes (uint8_t) representing the message to
     /// sign.
-    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
-        -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg
+    ) const -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
         requires KesDepth0<Depth>
     {
         const auto skey = [&]() -> PrivateKey

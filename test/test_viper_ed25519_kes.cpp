@@ -23,42 +23,39 @@ TEST_CASE("test_viper_ed25519_kes")
     SECTION("SumKesKey_Depth1")
     {
         auto [skey, pkey] = SumKesPrivateKey<1>::generate();
-        REQUIRE(skey.period() == 0);
 
         constexpr auto dummy_message = "tilin";
+        // sign
+        // verify
 
-        // auto sig = skey.sign(dummy_message);
-
-        // auto skey = ed25519::SumKesSigningKey<1>::generate();
-
-        // auto sskey = ed25519::SumKesPrivateKey<0>();
-        // CHECK(sskey.size == ed25519::SumKesPrivateKey<0>::size);
-        // CHECK(sskey.size != ed25519::SumKesPrivateKey<1>::size);
-        // CHECK(key.period() == 0);
-        // CHECK_THROWS(key.update());
-
+        // Key can be updated 2^4 - 1 times
+        REQUIRE(skey.period() == 0);
         REQUIRE_NOTHROW(skey.update());
+        REQUIRE(skey.period() == 1);
         REQUIRE_THROWS(skey.update());
 
+        // Verify the key is zeroed by the drop operation.
         skey.drop();
         auto z = std::array<uint8_t, SumKesPrivateKey<1>::size + 4>{};
         REQUIRE(skey.bytes() == z);
     }
 
-    //         fn buff_single() {
-    //         let mut skey_buffer = [0u8; Sum1Kes::SIZE + 4];
-    //         let mut seed = [0u8; Seed::SIZE];
-    //         let (mut skey, pkey) = Sum1Kes::keygen(&mut skey_buffer, &mut
-    //         seed); let dummy_message = b"tilin"; let sigma =
-    //         skey.sign(dummy_message);
-    //
-    //         assert_eq!(skey.get_period(), 0);
-    //
-    //         assert!(sigma.verify(0, &pkey, dummy_message).is_ok());
-    //
-    //         // Key can be updated once
-    //         assert!(skey.update().is_ok());
-    //     }
-    //
-    //     SumKesSigningKey
+    SECTION("SumKesKey_Depth4")
+    {
+        auto [skey, pkey] = SumKesPrivateKey<4>::generate();
+
+        constexpr auto dummy_message = "tilin";
+        // sign
+        // verify
+
+        // Key can be updated 2^4 - 1 times
+        for (int i = 0; i < 15; i++)
+        {
+            REQUIRE_NOTHROW(skey.update());
+        }
+        REQUIRE(skey.period() == 15);
+
+        // sign
+        // verify
+    }
 }
