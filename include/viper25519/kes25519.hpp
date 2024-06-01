@@ -447,6 +447,22 @@ class SumKesPrivateKey
         return SumKesPrivateKey<Depth>::keygen(mut_buffer, mut_seed);
     }  // generate
 
+    /// @brief Derive the public key paired with this private key.
+    [[nodiscard]] auto publicKey() const -> KesPublicKey
+        requires KesDepthN0<Depth>
+    {
+        const auto offset0 =
+            SumKesPrivateKey<Depth>::size - 2 * PUBLIC_KEY_SIZE;
+        const auto pk0 = KesPublicKey(std::span<const uint8_t>(this->prv_)
+                                          .subspan(offset0, PUBLIC_KEY_SIZE)
+                                          .first<PUBLIC_KEY_SIZE>());
+        const auto offset1 = SumKesPrivateKey<Depth>::size - PUBLIC_KEY_SIZE;
+        const auto pk1 = KesPublicKey(std::span<const uint8_t>(this->prv_)
+                                          .subspan(offset1, PUBLIC_KEY_SIZE)
+                                          .first<PUBLIC_KEY_SIZE>());
+        return pk0.hash_pair(pk1);
+    }  // publicKey
+
     /// @brief Zero out the private key.
     auto drop() -> void
     {

@@ -13,7 +13,7 @@ TEST_CASE("test_viper_ed25519_kes")
         REQUIRE_THROWS(skey.update());
     }
 
-    SECTION("CompactSumKesKey_")
+    SECTION("CompactSumKesKey_Depth0")
     {
         // auto key = ed25519::Sum0CompactKesPrivateKey::generate();
         // CHECK(key.period() == 0);
@@ -40,6 +40,8 @@ TEST_CASE("test_viper_ed25519_kes")
         REQUIRE(skey.bytes() == z);
     }
 
+    SECTION("CompactSumKesKey_Depth1") {}
+
     SECTION("SumKesKey_Depth4")
     {
         auto [skey, pkey] = SumKesPrivateKey<4>::generate();
@@ -57,5 +59,13 @@ TEST_CASE("test_viper_ed25519_kes")
 
         // sign
         // verify
+    }
+
+    SECTION("CompactSumKesKey_Depth4") {}
+
+    SECTION("KesKey_to_PublicKey")
+    {
+        auto [skey, pkey] = SumKesPrivateKey<4>::generate();
+        REQUIRE(pkey.bytes() == skey.publicKey().bytes());
     }
 }
