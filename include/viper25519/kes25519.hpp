@@ -114,15 +114,6 @@ inline auto be_to_u32(std::span<const uint8_t> bytes) -> uint32_t
 // other words, the number of individual hashes to be stored equals the depth
 // of the Merkle tree.
 
-/// ED25519 secret key size.
-inline constexpr size_t INDIVIDUAL_SECRET_SIZE = 32;
-
-/// ED25519 signature size.
-inline constexpr size_t SIGMA_SIZE = 64;
-
-/// KES public key size (which equals the size of the output of the hash).
-inline constexpr size_t PUBLIC_KEY_SIZE = 32;
-
 /// Maxium supported KES depth.
 inline constexpr size_t MAX_KES_DEPTH = 7;
 
@@ -137,8 +128,6 @@ concept KesDepth0 = KesValidDepth<Value> && Value == 0;
 /// Restrain depth to non-zero.
 template <auto Value>
 concept KesDepthN0 = KesValidDepth<Value> && Value != 0;
-
-using SeedByteArray = SecureByteArray<uint8_t, INDIVIDUAL_SECRET_SIZE>;
 
 /// Structure that represents the depth of the binary tree.
 struct KesDepth
@@ -183,7 +172,7 @@ struct KesDepth
 struct KesSeed
 {
     /// Byte representation size of a `KesSeed`.
-    static constexpr size_t size = INDIVIDUAL_SECRET_SIZE;
+    static constexpr size_t size = KEY_SIZE;
 
     /// Function that takes as input a mutable span, splits it into two, and
     /// overwrites the input with zeros.
@@ -204,7 +193,7 @@ class KesPublicKey : public PublicKey
   public:
     static constexpr size_t size = PUBLIC_KEY_SIZE;
 
-    explicit KesPublicKey(std::span<const uint8_t, ED25519_KEY_SIZE> pub)
+    explicit KesPublicKey(std::span<const uint8_t, PUBLIC_KEY_SIZE> pub)
         : PublicKey(pub)
     {
     }
@@ -222,7 +211,7 @@ class SumKesPrivateKey
   public:
     /// Size of the secret key in bytes.
     static constexpr size_t size =
-        INDIVIDUAL_SECRET_SIZE + Depth * (32 + (PUBLIC_KEY_SIZE * 2));
+        KEY_SIZE + Depth * (32 + (PUBLIC_KEY_SIZE * 2));
 
     // SumKesPrivateKey<Depth>() = delete;
 
@@ -360,8 +349,8 @@ class SumKesPrivateKey
         requires KesDepthN0<Depth>
     {
         // Split the seed
-        auto r0 = SeedByteArray();
-        auto seed = SeedByteArray();
+        auto r0 = KeyByteArray();
+        auto seed = KeyByteArray();
 
         if (op_seed.has_value())
         {
@@ -435,7 +424,7 @@ class SumKesPrivateKey
         // Use a secure array so that the seed cannot be leaked.
         const auto key = PrivateKey::generate();
         const auto seed = key.bytes();
-        auto mut_seed = SeedByteArray();
+        auto mut_seed = KeyByteArray();
         std::copy_n(seed.begin(), seed.size(), mut_seed.begin());
 
         // Provide a mutable buffer that will be filled with the KES key
@@ -515,9 +504,7 @@ class SumKesPrivateKey
         {
             // Wipe the seed for the current period
             SumKesPrivateKey<Depth - 1>::keygen_buffer(
-                key_slice.first<
-                    SumKesPrivateKey<Depth - 1>::size + INDIVIDUAL_SECRET_SIZE>(
-                ),
+                key_slice.first<SumKesPrivateKey<Depth - 1>::size + KEY_SIZE>(),
                 std::nullopt
             );
         }
@@ -572,12 +559,12 @@ class SumKesPrivateKey
     /// @param msg A span of bytes (uint8_t) representing the message to
     /// sign.
     [[nodiscard]] auto sign(std::span<const uint8_t> msg
-    ) const -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
+    ) const -> std::array<uint8_t, SIGNATURE_SIZE>
         requires KesDepth0<Depth>
     {
         const auto skey = [&]() -> PrivateKey
         {
-            auto key_bytes = SecureByteArray<uint8_t, ED25519_KEY_SIZE>{};
+            auto key_bytes = KeyByteArray{};
             std::copy_n(
                 this->prv_.data(), SumKesPrivateKey<Depth>::size,
                 key_bytes.begin()

@@ -37,7 +37,7 @@
 
 using namespace ed25519;
 
-PrivateKey::PrivateKey(std::span<const uint8_t, ED25519_KEY_SIZE> prv)
+PrivateKey::PrivateKey(std::span<const uint8_t, KEY_SIZE> prv)
 {
     std::move(prv.begin(), prv.end(), this->prv_.begin());
 }  // PrivateKey::PrivateKey
@@ -62,30 +62,30 @@ auto PrivateKey::generate() -> PrivateKey
 
     // Create the secret key
     auto skey_valid = false;
-    auto skey = Botan::SecureVector<uint8_t>(ED25519_KEY_SIZE);
+    auto skey = Botan::SecureVector<uint8_t>(KEY_SIZE);
     do
     {
         if (n_retries > max_retries) throw std::runtime_error("RNG error");
 
         // Create a random 32-byte secret key.
-        rng->randomize(skey.data(), ED25519_KEY_SIZE);
+        rng->randomize(skey.data(), KEY_SIZE);
 
         // SHA-512 hash of the secret key
         const auto sha512 = Botan::HashFunction::create("SHA-512");
-        sha512->update(skey.data(), ED25519_KEY_SIZE);
+        sha512->update(skey.data(), KEY_SIZE);
         auto keyhash = sha512->final();
 
         skey_valid = (keyhash[31] & 0b00100000) == 0;
         n_retries++;
     } while (!skey_valid);
 
-    return PrivateKey(std::span(skey).first<ED25519_KEY_SIZE>());
+    return PrivateKey(std::span(skey).first<KEY_SIZE>());
 }  // PrivateKey::generate
 
 auto PrivateKey::isValid() const -> bool
 {
     const auto sha512 = Botan::HashFunction::create("SHA-512");
-    sha512->update(this->prv_.data(), ED25519_KEY_SIZE);
+    sha512->update(this->prv_.data(), KEY_SIZE);
     auto keyhash = sha512->final();
     return (keyhash[31] & 0b00100000) == 0;
 }  // PrivateKey::isValid
@@ -93,7 +93,7 @@ auto PrivateKey::isValid() const -> bool
 auto PrivateKey::extend() const -> ExtendedPrivateKey
 {
     const auto sha512 = Botan::HashFunction::create("SHA-512");
-    sha512->update(this->prv_.data(), ED25519_KEY_SIZE);
+    sha512->update(this->prv_.data(), KEY_SIZE);
     auto keyhash = sha512->final();
 
     // On the ed25519 scalar leftmost 32 bytes:
@@ -108,9 +108,7 @@ auto PrivateKey::extend() const -> ExtendedPrivateKey
     // 32 bytes but assume this is the case for a valid Ed25519 key. The
     // generate method enforces this but we do not enforce this check here.
 
-    return ExtendedPrivateKey(
-        std::span(keyhash).first<ED25519_EXTENDED_KEY_SIZE>()
-    );
+    return ExtendedPrivateKey(std::span(keyhash).first<EXTENDED_KEY_SIZE>());
 }  // PrivateKey::extend
 
 auto PrivateKey::publicKey() const -> PublicKey
@@ -119,21 +117,20 @@ auto PrivateKey::publicKey() const -> PublicKey
     return ext_key.publicKey();
 }  // PrivateKey::publicKey
 
-auto PrivateKey::sign(std::span<const uint8_t> msg) const
-    -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
+auto PrivateKey::sign(std::span<const uint8_t> msg
+) const -> std::array<uint8_t, SIGNATURE_SIZE>
 {
     auto ext_key = this->extend();
     return ext_key.sign(msg);
 }  // PrivateKey::sign
 
-PublicKey::PublicKey(std::span<const uint8_t, ED25519_KEY_SIZE> pub)
+PublicKey::PublicKey(std::span<const uint8_t, KEY_SIZE> pub)
 {
-    std::copy_n(pub.begin(), ED25519_KEY_SIZE, this->pub_.begin());
+    std::copy_n(pub.begin(), KEY_SIZE, this->pub_.begin());
 }  // PublicKey::PublicKey
 
 auto PublicKey::verifySignature(
-    std::span<const uint8_t> msg,
-    std::span<const uint8_t, ED25519_SIGNATURE_SIZE> sig
+    std::span<const uint8_t> msg, std::span<const uint8_t, SIGNATURE_SIZE> sig
 ) const -> bool
 {
     if (sig[63] & 224) throw std::invalid_argument("Invalid signature.");
@@ -176,7 +173,7 @@ auto PublicKey::pointAdd(const PublicKey& rhs) const -> PublicKey
 }  // PublicKey::pointAdd
 
 ExtendedPrivateKey::ExtendedPrivateKey(
-    std::span<const uint8_t, ED25519_EXTENDED_KEY_SIZE> prv
+    std::span<const uint8_t, EXTENDED_KEY_SIZE> prv
 )
 {
     // Do not check for validity here since sometimes byte arrays may be run
@@ -218,8 +215,8 @@ auto ExtendedPrivateKey::publicKey() const -> PublicKey
     return PublicKey(ab.pack());
 }  // ExtendedPrivateKey::publicKey
 
-auto ExtendedPrivateKey::sign(std::span<const uint8_t> msg) const
-    -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
+auto ExtendedPrivateKey::sign(std::span<const uint8_t> msg
+) const -> std::array<uint8_t, SIGNATURE_SIZE>
 {
     // Derive the public key
     auto pk = this->publicKey().bytes();
@@ -254,7 +251,7 @@ auto ExtendedPrivateKey::sign(std::span<const uint8_t> msg) const
     auto sbytes = curve25519::bignum25519::contract256_modm(s);
 
     // Return the complete signature
-    auto sig = std::array<uint8_t, ED25519_SIGNATURE_SIZE>{};
+    auto sig = std::array<uint8_t, SIGNATURE_SIZE>{};
     std::copy_n(rs.begin(), 32, sig.begin());
     std::copy_n(sbytes.begin(), 32, sig.begin() + 32);
     return sig;

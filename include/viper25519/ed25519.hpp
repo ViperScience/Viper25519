@@ -32,13 +32,21 @@
 namespace ed25519
 {
 
-static constexpr size_t ED25519_KEY_SIZE = 32;
-static constexpr size_t ED25519_EXTENDED_KEY_SIZE = 64;
-static constexpr size_t ED25519_SIGNATURE_SIZE = 64;
+/// ED25519 secret key size.
+inline constexpr size_t KEY_SIZE = 32;
 
-using KeyByteArray = SecureByteArray<uint8_t, ED25519_KEY_SIZE>;
-using PubKeyByteArray = std::array<uint8_t, ED25519_KEY_SIZE>;
-using ExtKeyByteArray = SecureByteArray<uint8_t, ED25519_EXTENDED_KEY_SIZE>;
+/// ED25519 extended secret key size.
+inline constexpr size_t EXTENDED_KEY_SIZE = 64;
+
+/// ED25519 signature size.
+inline constexpr size_t SIGNATURE_SIZE = 64;
+
+/// ED25519 public key size.
+inline constexpr size_t PUBLIC_KEY_SIZE = 32;
+
+using KeyByteArray = SecureByteArray<uint8_t, KEY_SIZE>;
+using PubKeyByteArray = std::array<uint8_t, PUBLIC_KEY_SIZE>;
+using ExtKeyByteArray = SecureByteArray<uint8_t, EXTENDED_KEY_SIZE>;
 
 // Forward Declarations
 class PrivateKey;
@@ -62,7 +70,7 @@ class PrivateKey
     /// @param prv A span of 32 bytes that will be moved into the object.
     /// @note The input may still contain a valid key after the move and must
     /// be wiped by the calling code.
-    explicit PrivateKey(std::span<const uint8_t, ED25519_KEY_SIZE> prv);
+    explicit PrivateKey(std::span<const uint8_t, KEY_SIZE> prv);
 
     /// @brief Return a constant reference to the private key secure byte
     /// array.
@@ -86,8 +94,8 @@ class PrivateKey
 
     /// @brief Generate a message signature from the private key.
     /// @param msg A span of bytes (uint8_t) representing the message to sign.
-    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
-        -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>;
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg
+    ) const -> std::array<uint8_t, SIGNATURE_SIZE>;
 
 };  // PrivateKey
 
@@ -101,7 +109,7 @@ class PublicKey
   public:
     /// @brief Construct a key object from a span of key bytes.
     /// @param pub An array of 32 bytes that will be copied into the object.
-    explicit PublicKey(std::span<const uint8_t, ED25519_KEY_SIZE> pub);
+    explicit PublicKey(std::span<const uint8_t, PUBLIC_KEY_SIZE> pub);
 
     /// @brief Return a constant reference to the public key byte array.
     [[nodiscard]] constexpr auto bytes() const -> const PubKeyByteArray&
@@ -114,7 +122,7 @@ class PublicKey
     /// @param sig A span of 64 bytes (uint8_t) representing the signature.
     [[nodiscard]] auto verifySignature(
         std::span<const uint8_t> msg,
-        std::span<const uint8_t, ED25519_SIGNATURE_SIZE> sig
+        std::span<const uint8_t, SIGNATURE_SIZE> sig
     ) const -> bool;
 
     /// @brief Add two public keys as curve25519 points.
@@ -143,8 +151,7 @@ class ExtendedPrivateKey
     /// @param prv A span of 64 bytes that will be moved into the object.
     /// @note The input may still contain a valid key after the move and must
     /// be wiped by the calling code.
-    explicit ExtendedPrivateKey(
-        std::span<const uint8_t, ED25519_EXTENDED_KEY_SIZE> prv
+    explicit ExtendedPrivateKey(std::span<const uint8_t, EXTENDED_KEY_SIZE> prv
     );
 
     /// @brief Return a constant reference to the private key secure byte
@@ -166,8 +173,8 @@ class ExtendedPrivateKey
 
     /// @brief Generate a message signature from the private key.
     /// @param msg A span of bytes (uint8_t) representing the message to sign.
-    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
-        -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>;
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg
+    ) const -> std::array<uint8_t, SIGNATURE_SIZE>;
 
     /// @brief Add the lower bytes of two secret keys as scalar values.
     /// Add the lower 32 bytes of two extended secret keys as two large scalars.
@@ -176,8 +183,8 @@ class ExtendedPrivateKey
     /// @param rhs The secret key that will be added to the key within the
     /// object.
     /// @returns A 32-byte array containing the result of the summation.
-    [[nodiscard]] auto scalerAddLowerBytes(const ExtendedPrivateKey& rhs) const
-        -> std::array<uint8_t, 32>;
+    [[nodiscard]] auto scalerAddLowerBytes(const ExtendedPrivateKey& rhs
+    ) const -> std::array<uint8_t, 32>;
 
 };  // ExtendedPrivateKey
 

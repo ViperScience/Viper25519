@@ -32,14 +32,14 @@
 namespace ed25519
 {
 
-static constexpr size_t ED25519_VRF_SEED_SIZE = 32;
-static constexpr size_t ED25519_VRF_PUBLIC_KEY_SIZE = 32;
-static constexpr size_t ED25519_VRF_SECRET_KEY_SIZE = 64;
-static constexpr size_t ED25519_VRF_PROOF_SIZE = 80;
-static constexpr size_t ED25519_VRF_PROOF_HASH_SIZE = 64;
+static constexpr size_t VRF_SEED_SIZE = 32;
+static constexpr size_t VRF_PUBLIC_KEY_SIZE = 32;
+static constexpr size_t VRF_SECRET_KEY_SIZE = 64;
+static constexpr size_t VRF_PROOF_SIZE = 80;
+static constexpr size_t VRF_PROOF_HASH_SIZE = 64;
 
 /// @brief Represent a VRF key as a secure byte array.
-using VRFKeyByteArray = SecureByteArray<uint8_t, ED25519_VRF_SECRET_KEY_SIZE>;
+using VRFKeyByteArray = SecureByteArray<uint8_t, VRF_SECRET_KEY_SIZE>;
 
 /// @brief Represents a VRF public key.
 ///
@@ -52,9 +52,7 @@ class VRFPublicKey : public ed25519::PublicKey
   public:
     /// @brief Construct a key object from a span of key bytes.
     /// @param pub A span of 32 bytes that will be copied into the object.
-    explicit VRFPublicKey(
-        std::span<const uint8_t, ED25519_VRF_PUBLIC_KEY_SIZE> pub
-    )
+    explicit VRFPublicKey(std::span<const uint8_t, VRF_PUBLIC_KEY_SIZE> pub)
         : ed25519::PublicKey{pub}
     {
     }
@@ -86,9 +84,7 @@ class VRFSecretKey
     /// @param prv A span of 64 bytes that will be copied into the object. The
     ///            bytes need to consist of the secret key (or seed) and the
     ///            public key concatenated.
-    explicit VRFSecretKey(
-        std::span<const uint8_t, ED25519_VRF_SECRET_KEY_SIZE> prv
-    );
+    explicit VRFSecretKey(std::span<const uint8_t, VRF_SECRET_KEY_SIZE> prv);
 
     /// @brief Return a constant reference to the private key secure byte
     /// array.
@@ -104,7 +100,7 @@ class VRFSecretKey
     /// Factory method to create a new VRF secret key from a seed.
     /// @param seed 32 byte seed.
     [[nodiscard]] static auto fromSeed(
-        std::span<const uint8_t, ED25519_VRF_SEED_SIZE> seed
+        std::span<const uint8_t, VRF_SEED_SIZE> seed
     ) -> VRFSecretKey;
 
     /// @brief Ensure the key is a valid ed25519 key.
@@ -115,27 +111,27 @@ class VRFSecretKey
 
     /// @brief Generate a message signature from the private key.
     /// @param msg A span of bytes (uint8_t) representing the message to sign.
-    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
-        -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>;
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg
+    ) const -> std::array<uint8_t, SIGNATURE_SIZE>;
 
     /// @brief Construct a VRF proof from an initial message.
     /// @param msg A span of bytes (uint8_t) representing the message.
     /// @return A vector of bytes representing the VRF proof.
-    [[nodiscard]] auto constructProof(std::span<const uint8_t> msg)
-        -> std::array<uint8_t, ED25519_VRF_PROOF_SIZE>;
+    [[nodiscard]] auto constructProof(std::span<const uint8_t> msg
+    ) -> std::array<uint8_t, VRF_PROOF_SIZE>;
 
     /// @brief Convert a VRF proof to a VRF hash.
     /// @param proof The VRF proof.
     /// @return The VRF hash.
     [[nodiscard]] static auto proofToHash(
-        std::span<const uint8_t, ED25519_VRF_PROOF_SIZE> proof
-    ) -> std::array<uint8_t, ED25519_VRF_PROOF_HASH_SIZE>;
+        std::span<const uint8_t, VRF_PROOF_SIZE> proof
+    ) -> std::array<uint8_t, VRF_PROOF_HASH_SIZE>;
 
     /// @brief Compute the VRF hash of a message.
     /// @param msg The message to hash.
     /// @return The VRF hash.
-    [[nodiscard]] auto hash(std::span<const uint8_t> msg)
-        -> std::array<uint8_t, ED25519_VRF_PROOF_HASH_SIZE>;
+    [[nodiscard]] auto hash(std::span<const uint8_t> msg
+    ) -> std::array<uint8_t, VRF_PROOF_HASH_SIZE>;
 
     /// @brief Verify a VRF proof from the associated secret key.
     /// @param msg The message from which the proof and hash were derived.
@@ -143,7 +139,7 @@ class VRFSecretKey
     /// @return True if the proof is valid, false otherwise.
     [[nodiscard]] auto verifyProof(
         std::span<const uint8_t> msg,
-        std::span<const uint8_t, ED25519_VRF_PROOF_SIZE> proof
+        std::span<const uint8_t, VRF_PROOF_SIZE> proof
     ) const -> bool;
 };
 

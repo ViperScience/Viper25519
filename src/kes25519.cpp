@@ -49,32 +49,13 @@ auto KesSeed::split(
     Botan::secure_scrub_memory(seed.data(), seed.size());
 }  // KesSeed::split
 
-// auto KesSeed::split(std::span<uint8_t, KesSeed::size> bytes
-// ) -> std::pair<Botan::SecureVector<uint8_t>, Botan::SecureVector<uint8_t>>
-// {
-//     static constexpr auto one = std::array<uint8_t, 1>{1};
-//     static constexpr auto two = std::array<uint8_t, 1>{2};
-
-//     const auto hasher = Botan::HashFunction::create("Blake2b(256)");
-//     hasher->update(one.data(), one.size());
-//     hasher->update(bytes.data(), bytes.size());
-//     auto left_seed = hasher->final();  // Hasher is reset here
-//     hasher->update(two.data(), two.size());
-//     hasher->update(bytes.data(), bytes.size());
-//     auto right_seed = hasher->final();
-
-//     Botan::secure_scrub_memory(bytes.data(), bytes.size());
-
-//     return {left_seed, right_seed};
-// }  // KesSeed::split
-
 auto KesPublicKey::hash_pair(const KesPublicKey& other) const -> KesPublicKey
 {
     const auto self_bytes = this->bytes();
     const auto other_bytes = other.bytes();
     const auto hasher = Botan::HashFunction::create("Blake2b(256)");
-    hasher->update(self_bytes.data(), ED25519_KEY_SIZE);
-    hasher->update(other_bytes.data(), ED25519_KEY_SIZE);
+    hasher->update(self_bytes.data(), PUBLIC_KEY_SIZE);
+    hasher->update(other_bytes.data(), PUBLIC_KEY_SIZE);
     auto out = hasher->final();
-    return KesPublicKey(std::span(out).first<ED25519_KEY_SIZE>());
+    return KesPublicKey(std::span(out).first<PUBLIC_KEY_SIZE>());
 }  // KesPublicKey::hash_pair

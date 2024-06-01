@@ -43,9 +43,7 @@ auto VRFPublicKey::verifyProof(
     return result == 0;
 }  // VRFPublicKey::verifyProof
 
-VRFSecretKey::VRFSecretKey(
-    std::span<const uint8_t, ED25519_VRF_SECRET_KEY_SIZE> prv
-)
+VRFSecretKey::VRFSecretKey(std::span<const uint8_t, VRF_SECRET_KEY_SIZE> prv)
 {
     std::move(prv.begin(), prv.end(), this->prv_.begin());
 }  // VRFSecretKey::VRFSecretKey
@@ -57,25 +55,25 @@ auto VRFSecretKey::generate() -> VRFSecretKey
     return VRFSecretKey::fromSeed(seed_bytes);
 }  // VRFSecretKey::generate
 
-auto VRFSecretKey::fromSeed(std::span<const uint8_t, ED25519_VRF_SEED_SIZE> seed
+auto VRFSecretKey::fromSeed(std::span<const uint8_t, VRF_SEED_SIZE> seed
 ) -> VRFSecretKey
 {
     const auto seed_key = ed25519::PrivateKey(seed);
     const auto pkey_bytes = seed_key.extend().publicKey().bytes();
     auto skey_bytes = ed25519::ExtKeyByteArray{};
-    std::copy_n(seed.begin(), ED25519_VRF_SEED_SIZE, skey_bytes.begin());
+    std::copy_n(seed.begin(), VRF_SEED_SIZE, skey_bytes.begin());
     std::copy_n(
-        pkey_bytes.begin(), ED25519_VRF_PUBLIC_KEY_SIZE,
-        skey_bytes.begin() + ED25519_VRF_SEED_SIZE
+        pkey_bytes.begin(), VRF_PUBLIC_KEY_SIZE,
+        skey_bytes.begin() + VRF_SEED_SIZE
     );
     return VRFSecretKey{skey_bytes};
 }  // VRFSecretKey::fromSeed
 
 auto VRFSecretKey::publicKey() const -> VRFPublicKey
 {
-    auto pk_bytes = std::array<uint8_t, ED25519_VRF_PUBLIC_KEY_SIZE>();
+    auto pk_bytes = std::array<uint8_t, VRF_PUBLIC_KEY_SIZE>();
     std::copy_n(
-        this->prv_.begin() + ED25519_VRF_SEED_SIZE, ED25519_VRF_PUBLIC_KEY_SIZE,
+        this->prv_.begin() + VRF_SEED_SIZE, VRF_PUBLIC_KEY_SIZE,
         pk_bytes.begin()
     );
     return VRFPublicKey{pk_bytes};
@@ -83,31 +81,28 @@ auto VRFSecretKey::publicKey() const -> VRFPublicKey
 
 auto VRFSecretKey::isValid() const -> bool
 {
-    auto sk =
-        ed25519::PrivateKey(std::span(this->prv_).first<ED25519_KEY_SIZE>());
+    auto sk = ed25519::PrivateKey(std::span(this->prv_).first<KEY_SIZE>());
     if (!sk.isValid())
     {
         return false;
     }
 
-    auto pk = ed25519::PublicKey(
-        std::span(this->prv_).subspan<ED25519_KEY_SIZE, ED25519_KEY_SIZE>()
-    );
+    auto pk =
+        ed25519::PublicKey(std::span(this->prv_).subspan<KEY_SIZE, KEY_SIZE>());
     return pk.bytes() == sk.publicKey().bytes();
 }  // VRFSecretKey::isValid
 
-auto VRFSecretKey::sign(std::span<const uint8_t> msg) const
-    -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
+auto VRFSecretKey::sign(std::span<const uint8_t> msg
+) const -> std::array<uint8_t, SIGNATURE_SIZE>
 {
-    auto sk =
-        ed25519::PrivateKey(std::span(this->prv_).first<ED25519_KEY_SIZE>());
+    auto sk = ed25519::PrivateKey(std::span(this->prv_).first<KEY_SIZE>());
     return sk.sign(msg);
 }  // VRFSecretKey::sign
 
-auto VRFSecretKey::constructProof(std::span<const uint8_t> msg)
-    -> std::array<uint8_t, ED25519_VRF_PROOF_SIZE>
+auto VRFSecretKey::constructProof(std::span<const uint8_t> msg
+) -> std::array<uint8_t, VRF_PROOF_SIZE>
 {
-    auto proof = std::array<uint8_t, ED25519_VRF_PROOF_SIZE>{};
+    auto proof = std::array<uint8_t, VRF_PROOF_SIZE>{};
     auto result = crypto_vrf_ietfdraft03_prove(
         proof.data(), this->prv_.data(), msg.data(), msg.size()
     );
@@ -119,19 +114,17 @@ auto VRFSecretKey::constructProof(std::span<const uint8_t> msg)
 }  // VRFSecretKey::constructProof
 
 auto VRFSecretKey::verifyProof(
-    std::span<const uint8_t> msg,
-    std::span<const uint8_t, ED25519_VRF_PROOF_SIZE> proof
+    std::span<const uint8_t> msg, std::span<const uint8_t, VRF_PROOF_SIZE> proof
 ) const -> bool
 {
     auto pk = this->publicKey();
     return pk.verifyProof(msg, proof);
 }  // VRFSecretKey::verifyProof
 
-auto VRFSecretKey::proofToHash(
-    std::span<const uint8_t, ED25519_VRF_PROOF_SIZE> proof
-) -> std::array<uint8_t, ED25519_VRF_PROOF_HASH_SIZE>
+auto VRFSecretKey::proofToHash(std::span<const uint8_t, VRF_PROOF_SIZE> proof
+) -> std::array<uint8_t, VRF_PROOF_HASH_SIZE>
 {
-    auto hash = std::array<uint8_t, ED25519_VRF_PROOF_HASH_SIZE>{};
+    auto hash = std::array<uint8_t, VRF_PROOF_HASH_SIZE>{};
     auto result =
         crypto_vrf_ietfdraft03_proof_to_hash(hash.data(), proof.data());
     if (result != 0)
@@ -141,8 +134,8 @@ auto VRFSecretKey::proofToHash(
     return hash;
 }  // VRFSecretKey::proofToHash
 
-auto VRFSecretKey::hash(std::span<const uint8_t> msg)
-    -> std::array<uint8_t, ED25519_VRF_PROOF_HASH_SIZE>
+auto VRFSecretKey::hash(std::span<const uint8_t> msg
+) -> std::array<uint8_t, VRF_PROOF_HASH_SIZE>
 {
     return VRFSecretKey::proofToHash(this->constructProof(msg));
 }  // VRFSecretKey::hash
