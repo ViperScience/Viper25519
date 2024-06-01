@@ -449,8 +449,11 @@ class SumKesPrivateKey
         Botan::secure_scrub_memory(this->prv_.data(), this->prv_.size());
     }  // drop
 
-    /// @brief Return a constant reference to the private key secure byte
-    /// array.
+    /// @brief Return a constant reference to the private key bytes.
+    /// The encoding returns the following array of size `Self::SIZE + 4`:
+    /// ( sk_{-1} || seed || self.lhs_pk || self.rhs_pk || period )
+    /// where `sk_{-1}` is the secret secret key of lower depth.
+    /// Note that the period is only included in the last layer.
     [[nodiscard]] constexpr auto bytes() const
         -> const SecureByteArray<uint8_t, SumKesPrivateKey<Depth>::size + 4>&
     {
@@ -490,6 +493,7 @@ class SumKesPrivateKey
         }
         else if (next_period == depth.half())
         {
+            // Wipe the seed for the current period
             SumKesPrivateKey<Depth - 1>::keygen_buffer(
                 key_slice.first<
                     SumKesPrivateKey<Depth - 1>::size + INDIVIDUAL_SECRET_SIZE>(
@@ -567,7 +571,6 @@ class SumKesPrivateKey
   private:
     SecureByteArray<uint8_t, size + 4> prv_;
     uint32_t period_ = 0;
-    KesDepth depth_ = KesDepth(Depth);
 
 };  // SumKesPrivateKey
 
