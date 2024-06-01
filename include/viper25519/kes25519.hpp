@@ -53,6 +53,18 @@ inline auto u32_to_be(uint32_t value) -> std::array<uint8_t, 4>
     return bytes;
 }
 
+// Function to convert four Big Endian bytes to a 32 bit integer.
+inline auto be_to_u32(std::span<const uint8_t> bytes) -> uint32_t
+{
+    if (bytes.size() != 4)
+    {
+        throw std::invalid_argument("bytes must be of length 4");
+    }
+    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+}
+
+// Function to convert a 64 bit integer to 8 bytes using Big Endian.
+
 // Function to convert a 4 byte array to a 32 bit integer using Big Endian.
 
 // A key evolving signatures implementation based on
@@ -462,11 +474,19 @@ class SumKesPrivateKey
         return 0;
     }
 
+    [[nodiscard]] auto period() -> size_t
+        requires KesDepthN0<Depth>
+    {
+        return be_to_u32(std::span<const uint8_t>{
+            this->prv_.data() + SumKesPrivateKey<Depth>::size, 4
+        });
+    }
+
     /// @brief Generate a message signature from the private key.
     /// @param msg A span of bytes (uint8_t) representing the message to
     /// sign.
-    [[nodiscard]] auto sign(std::span<const uint8_t> msg
-    ) const -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg) const
+        -> std::array<uint8_t, ED25519_SIGNATURE_SIZE>
         requires KesDepth0<Depth>
     {
         const auto skey = [&]() -> PrivateKey

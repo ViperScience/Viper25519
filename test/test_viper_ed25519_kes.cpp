@@ -23,6 +23,7 @@ TEST_CASE("test_viper_ed25519_kes")
     SECTION("SumKesKey_Depth1")
     {
         auto [skey, pkey] = SumKesPrivateKey<1>::generate();
+        CHECK(skey.period() == 0);
 
         constexpr auto dummy_message = "tilin";
 
