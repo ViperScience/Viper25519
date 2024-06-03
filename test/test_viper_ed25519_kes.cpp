@@ -9,8 +9,14 @@ TEST_CASE("test_viper_ed25519_kes")
     SECTION("SumKesKey_Depth0")
     {
         auto [skey, pkey] = SumKesPrivateKey<0>::generate();
+
         REQUIRE(skey.period() == 0);
         REQUIRE_THROWS(skey.update());
+
+        constexpr auto dummy_message = "tilin";
+        auto sigma = skey.sign(dummy_message);
+
+        REQUIRE(sigma.verify(0, pkey, dummy_message));
     }
 
     SECTION("CompactSumKesKey_Depth0")
@@ -25,10 +31,10 @@ TEST_CASE("test_viper_ed25519_kes")
         auto [skey, pkey] = SumKesPrivateKey<1>::generate();
 
         constexpr auto dummy_message = "tilin";
-        // sign
-        // verify
+        auto sigma = skey.sign(dummy_message);
+        REQUIRE(sigma.verify(0, pkey, dummy_message));
 
-        // Key can be updated 2^4 - 1 times
+        // Key can be updated 2^1 - 1 times
         REQUIRE(skey.period() == 0);
         REQUIRE_NOTHROW(skey.update());
         REQUIRE(skey.period() == 1);
@@ -47,8 +53,8 @@ TEST_CASE("test_viper_ed25519_kes")
         auto [skey, pkey] = SumKesPrivateKey<4>::generate();
 
         constexpr auto dummy_message = "tilin";
-        // sign
-        // verify
+        auto sigma = skey.sign(dummy_message);
+        REQUIRE(sigma.verify(0, pkey, dummy_message));
 
         // Key can be updated 2^4 - 1 times
         for (int i = 0; i < 15; i++)
@@ -57,8 +63,7 @@ TEST_CASE("test_viper_ed25519_kes")
         }
         REQUIRE(skey.period() == 15);
 
-        // sign
-        // verify
+        REQUIRE(skey.sign(dummy_message).verify(15, pkey, dummy_message));
     }
 
     SECTION("CompactSumKesKey_Depth4") {}

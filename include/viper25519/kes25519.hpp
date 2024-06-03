@@ -169,6 +169,7 @@ struct KesDepth
     auto incr() const -> KesDepth { return KesDepth(this->value + 1); }
 };
 
+/// Utilities for the Seed of a KES scheme.
 struct KesSeed
 {
     /// Byte representation size of a `KesSeed`.
@@ -188,6 +189,8 @@ struct KesSeed
 
 };  // KesSeed
 
+/// KES public key, which is represented as an array of bytes.
+/// @note A `PublicKey` is the output of a Blake2b hash.
 class KesPublicKey : public PublicKey
 {
   public:
@@ -206,6 +209,86 @@ class KesPublicKey : public PublicKey
 
 template <size_t Depth>
     requires KesValidDepth<Depth>
+class SumKesSignature
+{
+  public:
+    /// Size of the signature in bytes.
+    static constexpr size_t size =
+        SIGNATURE_SIZE + Depth * (PUBLIC_KEY_SIZE * 2);
+
+    explicit SumKesSignature(std::span<const uint8_t> bytes)
+    {
+        if (bytes.size() != SumKesSignature<Depth>::size)
+        {
+            throw std::runtime_error(
+                "Invalid byte string size: " + std::to_string(bytes.size())
+            );
+        }
+        std::copy_n(bytes.begin(), size, this->data_.begin());
+    }  // SumKesSignature
+
+    [[nodiscard]] constexpr auto bytes() const
+        -> const std::array<uint8_t, SumKesSignature<Depth>::size>&
+    {
+        return this->data_;
+    }
+
+    /// Verify the signature
+    auto verify(
+        uint32_t period, const KesPublicKey& pk, std::span<const uint8_t> msg
+    ) const -> bool
+        requires KesDepth0<Depth>
+    {
+        return pk.verifySignature(msg, this->data_);
+    }  // verify
+
+    auto verify(
+        uint32_t period, const KesPublicKey& pk, std::span<const uint8_t> msg
+    ) const -> bool
+        requires KesDepthN0<Depth>
+    {
+        const auto offset0 = SumKesSignature<Depth>::size - 2 * PUBLIC_KEY_SIZE;
+        const auto lhs_pk = KesPublicKey(std::span<const uint8_t>(this->data_)
+                                             .subspan(offset0, PUBLIC_KEY_SIZE)
+                                             .first<PUBLIC_KEY_SIZE>());
+        const auto offset1 = SumKesSignature<Depth>::size - PUBLIC_KEY_SIZE;
+        const auto rhs_pk = KesPublicKey(std::span<const uint8_t>(this->data_)
+                                             .subspan(offset1, PUBLIC_KEY_SIZE)
+                                             .first<PUBLIC_KEY_SIZE>());
+
+        if (lhs_pk.hash_pair(rhs_pk).bytes() != pk.bytes())
+        {
+            throw std::invalid_argument("Invalid hash comparison.");
+        }
+
+        const auto sigma = SumKesSignature<Depth - 1>(
+            std::span<const uint8_t>(this->data_)
+                .first<SumKesSignature<Depth - 1>::size>()
+        );
+
+        const auto depth = KesDepth(Depth);
+        if (period < depth.half())
+        {
+            return sigma.verify(period, lhs_pk, msg);
+        }
+
+        return sigma.verify(period - depth.half(), rhs_pk, msg);
+    }  // verify
+
+    auto verify(uint32_t period, const KesPublicKey& pk, std::string_view msg)
+        const -> bool
+    {
+        const auto msg_bytes =
+            std::span<const uint8_t>((const uint8_t*)msg.data(), msg.size());
+        return this->verify(period, pk, msg_bytes);
+    }  // sign
+
+  private:
+    std::array<uint8_t, size> data_;
+};
+
+template <size_t Depth>
+    requires KesValidDepth<Depth>
 class SumKesPrivateKey
 {
   public:
@@ -213,14 +296,14 @@ class SumKesPrivateKey
     static constexpr size_t size =
         KEY_SIZE + Depth * (32 + (PUBLIC_KEY_SIZE * 2));
 
-    // SumKesPrivateKey<Depth>() = delete;
+    SumKesPrivateKey() = delete;
 
     /// @brief Construct a KES key object from a span of key bytes.
     /// @param bytes A span of bytes that will be moved into the object.
     /// @note The calling code is responsible for the lifetime of the input.
-    /// Furthermore, the input may still contain a valid key after the move and
-    /// must be wiped by the calling code.
-    explicit SumKesPrivateKey<Depth>(std::span<uint8_t> bytes)
+    /// Furthermore, the input may still contain a valid key after the move
+    /// and must be wiped by the calling code.
+    explicit SumKesPrivateKey(std::span<uint8_t> bytes)
     {
         if ((bytes.size() != SumKesPrivateKey<Depth>::size) &&
             (bytes.size() != SumKesPrivateKey<Depth>::size + 4))
@@ -234,14 +317,14 @@ class SumKesPrivateKey
     // need to make one that takes size only bytes and a period int
 
     /// @brief Key generation.
-    /// @param key_buffer A buffer of size `SumKesPrivateKey<Depth>::size` plus
-    /// four bytes to store period as a 32 bit integer .
+    /// @param key_buffer A buffer of size `SumKesPrivateKey<Depth>::size`
+    /// plus four bytes to store period as a 32 bit integer .
     /// @param seed A buffer of size `KesSeed::size` containing the seed.
     /// @return A pair of `SumKesPrivateKey<Depth>` and `KesPublicKey`.
     /// @note The calling code is responsible for the lifetime of the input
-    /// buffer. Furthermore, the input may still contain a valid key after the
-    /// move and must be wiped by the calling code. Using a SecureByteArray
-    /// should take care of this.
+    /// buffer. Furthermore, the input may still contain a valid key after
+    /// the move and must be wiped by the calling code. Using a
+    /// SecureByteArray should take care of this.
     [[nodiscard]] static auto keygen(
         std::span<uint8_t, SumKesPrivateKey<Depth>::size + 4> key_buffer,
         std::span<uint8_t, KesSeed::size> seed
@@ -420,16 +503,16 @@ class SumKesPrivateKey
     {
         // Create a seed from an Ed25519 private key.
         // The private key will securely clean up when it is deallocated. We
-        // need to make a mutable copy to pass to the key generation function.
-        // Use a secure array so that the seed cannot be leaked.
+        // need to make a mutable copy to pass to the key generation
+        // function. Use a secure array so that the seed cannot be leaked.
         const auto key = PrivateKey::generate();
         const auto seed = key.bytes();
         auto mut_seed = KeyByteArray();
         std::copy_n(seed.begin(), seed.size(), mut_seed.begin());
 
         // Provide a mutable buffer that will be filled with the KES key
-        // components. Use a secure array so that it is securely wiped after key
-        // generation.
+        // components. Use a secure array so that it is securely wiped after
+        // key generation.
         auto mut_buffer =
             SecureByteArray<uint8_t, SumKesPrivateKey<Depth>::size + 4>();
 
@@ -469,7 +552,7 @@ class SumKesPrivateKey
         return this->prv_;
     }
 
-    static auto update_buffer(std::span<uint8_t> key_slice, uint32_t period)
+    static auto update_buffer(std::span<uint8_t> in_buffer, uint32_t period)
         -> void
         requires KesDepth0<Depth>
     {
@@ -479,7 +562,7 @@ class SumKesPrivateKey
         );
     }
 
-    static auto update_buffer(std::span<uint8_t> key_slice, uint32_t period)
+    static auto update_buffer(std::span<uint8_t> in_buffer, uint32_t period)
         -> void
         requires KesDepthN0<Depth>
     {
@@ -489,7 +572,8 @@ class SumKesPrivateKey
         if (next_period == depth.total())
         {
             throw std::runtime_error(
-                "The key cannot be furhter updated (the period has reached the "
+                "The key cannot be furhter updated (the period has reached "
+                "the "
                 "maximum allowed)"
             );
         }
@@ -497,21 +581,21 @@ class SumKesPrivateKey
         if (next_period < depth.half())
         {
             SumKesPrivateKey<Depth - 1>::update_buffer(
-                key_slice.first<SumKesPrivateKey<Depth - 1>::size>(), period
+                in_buffer.first<SumKesPrivateKey<Depth - 1>::size>(), period
             );
         }
         else if (next_period == depth.half())
         {
             // Wipe the seed for the current period
             SumKesPrivateKey<Depth - 1>::keygen_buffer(
-                key_slice.first<SumKesPrivateKey<Depth - 1>::size + KEY_SIZE>(),
+                in_buffer.first<SumKesPrivateKey<Depth - 1>::size + KEY_SIZE>(),
                 std::nullopt
             );
         }
         else if (next_period > depth.half())
         {
             SumKesPrivateKey<Depth - 1>::update_buffer(
-                key_slice.first<SumKesPrivateKey<Depth - 1>::size>(),
+                in_buffer.first<SumKesPrivateKey<Depth - 1>::size>(),
                 period - depth.half()
             );
         }
@@ -555,11 +639,60 @@ class SumKesPrivateKey
         });
     }
 
+    static auto sign_from_buffer(
+        std::span<const uint8_t> in_buffer, std::span<const uint8_t> msg
+    ) -> SumKesSignature<Depth>
+        requires KesDepth0<Depth>
+    {
+        if (in_buffer.size() != KEY_SIZE)
+        {
+            throw std::invalid_argument("Invalid key size.");
+        }
+        const auto skey = PrivateKey(in_buffer.first<KEY_SIZE>());
+        return SumKesSignature<Depth>(skey.sign(msg));
+    }  // sign_from_buffer
+
+    // sig(depth-1) || pk0 || pk1
+    static auto sign_from_buffer(
+        std::span<const uint8_t> in_buffer, std::span<const uint8_t> msg
+    ) -> SumKesSignature<Depth>
+        requires KesDepthN0<Depth>
+    {
+        auto sig_bytes = std::array<uint8_t, SumKesSignature<Depth>::size>();
+
+        // Recursively get the signature from the next lowest key depth.
+        auto sigma = SumKesPrivateKey<Depth - 1>::sign_from_buffer(
+            in_buffer.first<SumKesPrivateKey<Depth - 1>::size>(), msg
+        );
+        std::copy(
+            sigma.bytes().begin(), sigma.bytes().end(), sig_bytes.begin()
+        );
+
+        // Copy the first public key
+        const auto offset0 = SumKesPrivateKey<Depth - 1>::size + KEY_SIZE;
+        std::copy_n(
+            in_buffer.subspan(offset0, PUBLIC_KEY_SIZE).begin(),
+            PUBLIC_KEY_SIZE,
+            sig_bytes.begin() + SumKesSignature<Depth - 1>::size
+        );
+
+        // Copy the second public key
+        const auto offset1 = offset0 + PUBLIC_KEY_SIZE;
+        std::copy_n(
+            in_buffer.subspan(offset1, PUBLIC_KEY_SIZE).begin(),
+            PUBLIC_KEY_SIZE,
+            sig_bytes.begin() + SumKesSignature<Depth - 1>::size +
+                PUBLIC_KEY_SIZE
+        );
+
+        return SumKesSignature<Depth>(sig_bytes);
+    }  // sign_from_buffer
+
     /// @brief Generate a message signature from the private key.
     /// @param msg A span of bytes (uint8_t) representing the message to
     /// sign.
     [[nodiscard]] auto sign(std::span<const uint8_t> msg
-    ) const -> std::array<uint8_t, SIGNATURE_SIZE>
+    ) const -> SumKesSignature<Depth>
         requires KesDepth0<Depth>
     {
         const auto skey = [&]() -> PrivateKey
@@ -572,7 +705,22 @@ class SumKesPrivateKey
             return PrivateKey(key_bytes);
         }();
 
-        return skey.sign(msg);
+        return SumKesSignature<Depth>(skey.sign(msg));
+    }  // sign
+
+    [[nodiscard]] auto sign(std::span<const uint8_t> msg
+    ) const -> SumKesSignature<Depth>
+        requires KesDepthN0<Depth>
+    {
+        return SumKesPrivateKey<Depth>::sign_from_buffer(this->bytes(), msg);
+    }  // sign
+
+    [[nodiscard]] auto sign(std::string_view msg
+    ) const -> SumKesSignature<Depth>
+    {
+        const auto msg_bytes =
+            std::span<const uint8_t>((const uint8_t*)msg.data(), msg.size());
+        return this->sign(msg_bytes);
     }  // sign
 
   private:
