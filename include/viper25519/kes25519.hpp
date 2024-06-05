@@ -195,9 +195,9 @@ struct KesSeed
 class KesPublicKey
 {
   public:
-    static constexpr size_t size = PUBLIC_KEY_SIZE;
+    static constexpr size_t size = 32;
 
-    explicit KesPublicKey(std::span<const uint8_t, PUBLIC_KEY_SIZE> pub)
+    explicit KesPublicKey(std::span<const uint8_t, size> pub)
     {
         std::copy_n(pub.begin(), pub.size(), this->pub_.begin());
     }
@@ -222,8 +222,7 @@ class SumKesSignature
 {
   public:
     /// Size of the signature in bytes.
-    static constexpr size_t size =
-        SIGNATURE_SIZE + Depth * (PUBLIC_KEY_SIZE * 2);
+    static constexpr size_t size = 64 + Depth * (KesPublicKey::size * 2);
 
     explicit SumKesSignature(std::span<const uint8_t> bytes)
     {
@@ -233,23 +232,24 @@ class SumKesSignature
                 "Invalid byte string size: " + std::to_string(bytes.size())
             );
         }
-        std::copy_n(bytes.begin(), size, this->data_.begin());
+        std::copy_n(bytes.begin(), bytes.size(), this->bytes_.begin());
     }  // SumKesSignature
 
+    /// @brief Return a constant reference to the signature bytes.
     [[nodiscard]] constexpr auto bytes() const
         -> const std::array<uint8_t, SumKesSignature<Depth>::size>&
     {
-        return this->data_;
+        return this->bytes_;
     }
 
-    /// Verify the signature
+    /// @brief Verify the KES signature.
     auto verify(
         uint32_t period, const KesPublicKey& pk, std::span<const uint8_t> msg
     ) const -> bool
         requires KesDepth0<Depth>
     {
         auto pub = PublicKey(pk.bytes());
-        return pub.verifySignature(msg, this->data_);
+        return pub.verifySignature(msg, this->bytes_);
     }  // verify
 
     auto verify(
@@ -257,12 +257,14 @@ class SumKesSignature
     ) const -> bool
         requires KesDepthN0<Depth>
     {
+        const auto byte_view = std::span<const uint8_t>(this->bytes_);
+
         const auto offset0 = SumKesSignature<Depth>::size - 2 * PUBLIC_KEY_SIZE;
-        const auto lhs_pk = KesPublicKey(std::span<const uint8_t>(this->data_)
+        const auto lhs_pk = KesPublicKey(std::span<const uint8_t>(this->bytes_)
                                              .subspan(offset0, PUBLIC_KEY_SIZE)
                                              .first<PUBLIC_KEY_SIZE>());
         const auto offset1 = SumKesSignature<Depth>::size - PUBLIC_KEY_SIZE;
-        const auto rhs_pk = KesPublicKey(std::span<const uint8_t>(this->data_)
+        const auto rhs_pk = KesPublicKey(std::span<const uint8_t>(this->bytes_)
                                              .subspan(offset1, PUBLIC_KEY_SIZE)
                                              .first<PUBLIC_KEY_SIZE>());
 
@@ -272,7 +274,7 @@ class SumKesSignature
         }
 
         const auto sigma = SumKesSignature<Depth - 1>(
-            std::span<const uint8_t>(this->data_)
+            std::span<const uint8_t>(this->bytes_)
                 .first<SumKesSignature<Depth - 1>::size>()
         );
 
@@ -294,7 +296,7 @@ class SumKesSignature
     }  // sign
 
   private:
-    std::array<uint8_t, size> data_;
+    std::array<uint8_t, size> bytes_;
 };
 
 template <size_t Depth>
