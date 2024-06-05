@@ -35,6 +35,7 @@
 // Third-Party Headers
 #include <botan/hash.h>
 #include <botan/mem_ops.h>
+#include <sodium.h>
 
 // Viper25519 Headers
 #include <viper25519/ed25519.hpp>
@@ -168,13 +169,13 @@ struct KesDepth
 
     /// Returns a new `Depth` value with one more depth as `self`.
     auto incr() const -> KesDepth { return KesDepth(this->value + 1); }
-};
+};  // KesDepth
 
 /// Utilities for the Seed of a KES scheme.
 struct KesSeed
 {
     /// Byte representation size of a `KesSeed`.
-    static constexpr size_t size = KEY_SIZE;
+    static constexpr size_t size = 32;
 
     /// Function that takes as input a mutable span, splits it into two, and
     /// overwrites the input with zeros.
@@ -197,6 +198,8 @@ class KesPublicKey
   public:
     static constexpr size_t size = 32;
 
+    /// @brief Construct a public key object from a span of key bytes.
+    /// @param pub A span of 32 bytes that will be copied into the object.
     explicit KesPublicKey(std::span<const uint8_t, size> pub)
     {
         std::copy_n(pub.begin(), pub.size(), this->pub_.begin());
@@ -214,7 +217,7 @@ class KesPublicKey
 
   private:
     std::array<uint8_t, size> pub_;
-};
+};  // KesPublicKey
 
 template <size_t Depth>
     requires KesValidDepth<Depth>
@@ -253,8 +256,10 @@ class SumKesSignature
     ) const -> bool
         requires KesDepth0<Depth>
     {
-        auto pub = PublicKey(pk.bytes());
-        return pub.verifySignature(msg, this->bytes_);
+        return crypto_sign_verify_detached(
+                   this->bytes_.data(), msg.data(), msg.size(),
+                   pk.bytes().data()
+               ) == 0;
     }  // verify
 
     auto verify(
@@ -310,7 +315,7 @@ class SumKesPrivateKey
   public:
     /// Size of the secret key in bytes.
     static constexpr size_t size =
-        KEY_SIZE + Depth * (32 + (PUBLIC_KEY_SIZE * 2));
+        KesSeed::size + Depth * (KesSeed::size + (KesPublicKey::size * 2));
 
     SumKesPrivateKey() = delete;
 
@@ -371,7 +376,7 @@ class SumKesPrivateKey
             SumKesPrivateKey<Depth>(key_buffer),
             KesPublicKey(public_key.bytes())
         };
-    }
+    }  // SumKesPrivateKey<Depth>::keygen
 
     [[nodiscard]] static auto keygen(
         std::span<uint8_t, SumKesPrivateKey<Depth>::size + 4> key_buffer,
