@@ -219,6 +219,8 @@ class KesPublicKey
     std::array<uint8_t, size> pub_;
 };  // KesPublicKey
 
+/// @brief KES Signature
+/// @tparam Depth The depth of the KES key used to create the signature.
 template <size_t Depth>
     requires KesValidDepth<Depth>
 class SumKesSignature
@@ -523,13 +525,13 @@ class SumKesPrivateKey
         -> std::pair<SumKesPrivateKey<Depth>, KesPublicKey>
     {
         // Create a seed from an Ed25519 private key.
-        // The private key will securely clean up when it is deallocated. We
-        // need to make a mutable copy to pass to the key generation
+        // We need to make a mutable copy to pass to the key generation
         // function. Use a secure array so that the seed cannot be leaked.
-        const auto key = PrivateKey::generate();
-        const auto seed = key.bytes();
-        auto mut_seed = KeyByteArray();
-        std::copy_n(seed.begin(), seed.size(), mut_seed.begin());
+        auto pk = SecureByteArray<uint8_t, KesPublicKey::size>();
+        auto seed = SecureByteArray<uint8_t, 64>();
+        crypto_sign_keypair(pk.data(), seed.data());
+        auto mut_seed = SecureByteArray<uint8_t, KesSeed::size>();
+        std::copy_n(seed.begin(), KesSeed::size, mut_seed.begin());
 
         // Provide a mutable buffer that will be filled with the KES key
         // components. Use a secure array so that it is securely wiped after
