@@ -24,9 +24,6 @@
 // Third-Party Libraries
 #include <botan/hash.h>
 
-// Private Viper25519 code
-#include "utils.hpp"
-
 using namespace ed25519;
 
 auto KesSeed::split(
@@ -51,11 +48,10 @@ auto KesSeed::split(
 
 auto KesPublicKey::hash_pair(const KesPublicKey& other) const -> KesPublicKey
 {
-    const auto self_bytes = this->bytes();
-    const auto other_bytes = other.bytes();
+    auto out = std::array<uint8_t, KesPublicKey::size>();
     const auto hasher = Botan::HashFunction::create("Blake2b(256)");
-    hasher->update(self_bytes.data(), PUBLIC_KEY_SIZE);
-    hasher->update(other_bytes.data(), PUBLIC_KEY_SIZE);
-    auto out = hasher->final();
-    return KesPublicKey(std::span(out).first<PUBLIC_KEY_SIZE>());
+    hasher->update(this->bytes().data(), KesPublicKey::size);
+    hasher->update(other.bytes().data(), KesPublicKey::size);
+    hasher->final(out.data());
+    return KesPublicKey(out);
 }  // KesPublicKey::hash_pair

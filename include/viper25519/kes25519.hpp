@@ -38,6 +38,7 @@
 
 // Viper25519 Headers
 #include <viper25519/ed25519.hpp>
+#include <viper25519/secmem.hpp>
 
 namespace ed25519
 {
@@ -191,20 +192,28 @@ struct KesSeed
 
 /// KES public key, which is represented as an array of bytes.
 /// @note A `PublicKey` is the output of a Blake2b hash.
-class KesPublicKey : public PublicKey
+class KesPublicKey
 {
   public:
     static constexpr size_t size = PUBLIC_KEY_SIZE;
 
     explicit KesPublicKey(std::span<const uint8_t, PUBLIC_KEY_SIZE> pub)
-        : PublicKey(pub)
     {
+        std::copy_n(pub.begin(), pub.size(), this->pub_.begin());
     }
 
-    auto verify();
+    /// @brief Return a constant reference to the public key bytes.
+    [[nodiscard]] constexpr auto bytes() const
+        -> const std::array<uint8_t, size>&
+    {
+        return this->pub_;
+    }
 
     /// @brief Hash two public keys using Blake2b.
     auto hash_pair(const KesPublicKey& other) const -> KesPublicKey;
+
+  private:
+    std::array<uint8_t, size> pub_;
 };
 
 template <size_t Depth>
@@ -239,7 +248,8 @@ class SumKesSignature
     ) const -> bool
         requires KesDepth0<Depth>
     {
-        return pk.verifySignature(msg, this->data_);
+        auto pub = PublicKey(pk.bytes());
+        return pub.verifySignature(msg, this->data_);
     }  // verify
 
     auto verify(
