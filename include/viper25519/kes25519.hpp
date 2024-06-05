@@ -224,6 +224,8 @@ class SumKesSignature
     /// Size of the signature in bytes.
     static constexpr size_t size = 64 + Depth * (KesPublicKey::size * 2);
 
+    /// @brief Create a signature object from a span of bytes.
+    /// @param bytes The signature byte string.
     explicit SumKesSignature(std::span<const uint8_t> bytes)
     {
         if (bytes.size() != SumKesSignature<Depth>::size)
@@ -243,6 +245,9 @@ class SumKesSignature
     }
 
     /// @brief Verify the KES signature.
+    /// @param period The KES period of the signature.
+    /// @param pk The KES public key.
+    /// @param msg The message used to create the signature (bytes).
     auto verify(
         uint32_t period, const KesPublicKey& pk, std::span<const uint8_t> msg
     ) const -> bool
@@ -259,14 +264,10 @@ class SumKesSignature
     {
         const auto byte_view = std::span<const uint8_t>(this->bytes_);
 
-        const auto offset0 = SumKesSignature<Depth>::size - 2 * PUBLIC_KEY_SIZE;
-        const auto lhs_pk = KesPublicKey(std::span<const uint8_t>(this->bytes_)
-                                             .subspan(offset0, PUBLIC_KEY_SIZE)
-                                             .first<PUBLIC_KEY_SIZE>());
-        const auto offset1 = SumKesSignature<Depth>::size - PUBLIC_KEY_SIZE;
-        const auto rhs_pk = KesPublicKey(std::span<const uint8_t>(this->bytes_)
-                                             .subspan(offset1, PUBLIC_KEY_SIZE)
-                                             .first<PUBLIC_KEY_SIZE>());
+        const auto lhs_pk = KesPublicKey(
+            byte_view.last<2 * KesPublicKey::size>().first<KesPublicKey::size>()
+        );
+        const auto rhs_pk = KesPublicKey(byte_view.last<KesPublicKey::size>());
 
         if (lhs_pk.hash_pair(rhs_pk).bytes() != pk.bytes())
         {
@@ -274,19 +275,22 @@ class SumKesSignature
         }
 
         const auto sigma = SumKesSignature<Depth - 1>(
-            std::span<const uint8_t>(this->bytes_)
-                .first<SumKesSignature<Depth - 1>::size>()
+            byte_view.first<SumKesSignature<Depth - 1>::size>()
         );
 
-        const auto depth = KesDepth(Depth);
-        if (period < depth.half())
+        const auto half_depth = KesDepth(Depth).half();
+        if (period < half_depth)
         {
             return sigma.verify(period, lhs_pk, msg);
         }
 
-        return sigma.verify(period - depth.half(), rhs_pk, msg);
+        return sigma.verify(period - half_depth, rhs_pk, msg);
     }  // verify
 
+    /// @brief Verify the KES signature.
+    /// @param period The KES period of the signature.
+    /// @param pk The KES public key.
+    /// @param msg The message used to create the signature (string).
     auto verify(uint32_t period, const KesPublicKey& pk, std::string_view msg)
         const -> bool
     {
