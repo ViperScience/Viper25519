@@ -38,7 +38,6 @@
 #include <sodium.h>
 
 // Viper25519 Headers
-#include <viper25519/ed25519.hpp>
 #include <viper25519/secmem.hpp>
 
 namespace ed25519
@@ -308,8 +307,10 @@ class SumKesSignature
 
   private:
     std::array<uint8_t, size> bytes_;
-};
+};  // SumKesSignature
 
+/// @brief KES private key based on the sum composition.
+/// @tparam Depth The key depth. Max evolutions are 1^Depth - 1.
 template <size_t Depth>
     requires KesValidDepth<Depth>
 class SumKesPrivateKey
@@ -363,11 +364,15 @@ class SumKesPrivateKey
             throw std::runtime_error("Invalid input seed size.");
         }
 
-        auto pk = std::array<uint8_t, KesPublicKey::size>();
-        auto sk =
-            SecureByteArray<uint8_t, KesSeed::size + KesPublicKey::size>();
+        // Generate a key pair from the seed.
+        auto pk = std::array<uint8_t, crypto_sign_PUBLICKEYBYTES>();
+        auto sk = SecureByteArray<uint8_t, crypto_sign_SECRETKEYBYTES>();
         crypto_sign_ed25519_seed_keypair(pk.data(), sk.data(), seed.data());
+
+        // Copy the seed to the KES secret key buffer.
         std::copy_n(sk.begin(), KesSeed::size, key_buffer.begin());
+
+        // Secure scrub the seed.
         Botan::secure_scrub_memory(seed.data(), seed.size());
 
         // We write the period to the main data.
@@ -413,37 +418,37 @@ class SumKesPrivateKey
     ) -> KesPublicKey
         requires KesDepth0<Depth>
     {
+        auto pk = std::array<uint8_t, crypto_sign_PUBLICKEYBYTES>();
+        auto sk = SecureByteArray<uint8_t, crypto_sign_SECRETKEYBYTES>();
+
         if (op_seed.has_value())
         {
             if ((*op_seed).size() != SumKesPrivateKey<0>::size)
             {
                 throw std::runtime_error("Invalid input seed size.");
             }
-            auto pk = SecureByteArray<uint8_t, KesPublicKey::size>();
-            auto sk = SecureByteArray<uint8_t, 64>();
+
+            // Generate the key pair from the seed.
             crypto_sign_seed_keypair(pk.data(), sk.data(), (*op_seed).data());
+
+            // Securely scrub the seed since it is no longer needed.
             Botan::secure_scrub_memory((*op_seed).data(), (*op_seed).size());
-
-            // Write the seed to the KES key buffer.
-            std::copy_n(sk.begin(), KesSeed::size, in_buffer.begin());
-
-            return KesPublicKey(pk);
         }
-
-        if (in_buffer.size() != SumKesPrivateKey<0>::size + KesSeed::size)
+        else
         {
-            throw std::runtime_error("Input size is incorrect.");
+            if (in_buffer.size() != SumKesPrivateKey<0>::size + KesSeed::size)
+            {
+                throw std::runtime_error("Input size is incorrect.");
+            }
+            const auto seed = in_buffer.last<KesSeed::size>();
+            crypto_sign_seed_keypair(pk.data(), sk.data(), seed.data());
+            Botan::secure_scrub_memory(seed.data(), seed.size());
         }
 
-        const auto seed = in_buffer.last<KesSeed::size>();
-        auto pk = SecureByteArray<uint8_t, KesPublicKey::size>();
-        auto sk = SecureByteArray<uint8_t, 64>();
-        crypto_sign_seed_keypair(pk.data(), sk.data(), seed.data());
-        Botan::secure_scrub_memory(seed.data(), seed.size());
+        // Write the seed to the KES key buffer.
         std::copy_n(sk.begin(), KesSeed::size, in_buffer.begin());
 
         return KesPublicKey(pk);
-
     }  // keygen_buffer
 
     static auto keygen_buffer(
@@ -453,8 +458,8 @@ class SumKesPrivateKey
         requires KesDepthN0<Depth>
     {
         // Split the seed
-        auto r0 = KeyByteArray();
-        auto seed = KeyByteArray();
+        auto r0 = SecureByteArray<uint8_t, KesSeed::size>();
+        auto seed = SecureByteArray<uint8_t, KesSeed::size>();
 
         if (op_seed.has_value())
         {
@@ -503,12 +508,12 @@ class SumKesPrivateKey
 
         // Write the public keys to the main data.
         std::copy_n(
-            pk_0.bytes().begin(), PUBLIC_KEY_SIZE,
+            pk_0.bytes().begin(), KesPublicKey::size,
             in_buffer.begin() + SumKesPrivateKey<Depth - 1>::size +
                 KesSeed::size
         );
         std::copy_n(
-            pk_1.bytes().begin(), PUBLIC_KEY_SIZE,
+            pk_1.bytes().begin(), KesPublicKey::size,
             in_buffer.begin() + SumKesPrivateKey<Depth - 1>::size +
                 KesSeed::size + KesPublicKey::size
         );
@@ -525,9 +530,10 @@ class SumKesPrivateKey
         // Create a seed from an Ed25519 private key.
         // We need to make a mutable copy to pass to the key generation
         // function. Use a secure array so that the seed cannot be leaked.
-        auto pk = SecureByteArray<uint8_t, KesPublicKey::size>();
-        auto seed = SecureByteArray<uint8_t, 64>();
+        auto pk = SecureByteArray<uint8_t, crypto_sign_PUBLICKEYBYTES>();
+        auto seed = SecureByteArray<uint8_t, crypto_sign_SECRETKEYBYTES>();
         crypto_sign_keypair(pk.data(), seed.data());
+
         auto mut_seed = SecureByteArray<uint8_t, KesSeed::size>();
         std::copy_n(seed.begin(), KesSeed::size, mut_seed.begin());
 
@@ -611,7 +617,8 @@ class SumKesPrivateKey
         {
             // Wipe the seed for the current period
             SumKesPrivateKey<Depth - 1>::keygen_buffer(
-                in_buffer.first<SumKesPrivateKey<Depth - 1>::size + KEY_SIZE>(),
+                in_buffer
+                    .first<SumKesPrivateKey<Depth - 1>::size + KesSeed::size>(),
                 std::nullopt
             );
         }
@@ -667,13 +674,13 @@ class SumKesPrivateKey
     ) -> SumKesSignature<Depth>
         requires KesDepth0<Depth>
     {
-        if (in_buffer.size() != KEY_SIZE)
+        if (in_buffer.size() != KesSeed::size)
         {
-            throw std::invalid_argument("Invalid key size.");
+            throw std::invalid_argument("Invalid seed size.");
         }
 
-        auto pk = SecureByteArray<uint8_t, KesPublicKey::size>();
-        auto sk = SecureByteArray<uint8_t, 64>();
+        auto pk = SecureByteArray<uint8_t, crypto_sign_PUBLICKEYBYTES>();
+        auto sk = SecureByteArray<uint8_t, crypto_sign_SECRETKEYBYTES>();
         crypto_sign_seed_keypair(pk.data(), sk.data(), in_buffer.data());
 
         auto sig = std::array<uint8_t, SumKesSignature<0>::size>();
@@ -683,7 +690,7 @@ class SumKesPrivateKey
         return SumKesSignature<Depth>(sig);
     }  // sign_from_buffer
 
-    // sig(depth-1) || pk0 || pk1
+    // sig(depth-1) + pk0 + pk1
     static auto sign_from_buffer(
         std::span<const uint8_t> in_buffer, std::span<const uint8_t> msg
     ) -> SumKesSignature<Depth>
@@ -699,21 +706,20 @@ class SumKesPrivateKey
             sigma.bytes().begin(), sigma.bytes().end(), sig_bytes.begin()
         );
 
+        constexpr auto pklen = KesPublicKey::size;
+        constexpr auto offset0 = SumKesPrivateKey<Depth>::size - 2 * pklen;
+        constexpr auto offset1 = offset0 + pklen;
+
         // Copy the first public key
-        const auto offset0 = SumKesPrivateKey<Depth - 1>::size + KEY_SIZE;
         std::copy_n(
-            in_buffer.subspan(offset0, PUBLIC_KEY_SIZE).begin(),
-            PUBLIC_KEY_SIZE,
-            sig_bytes.begin() + SumKesSignature<Depth - 1>::size
+            in_buffer.subspan(offset0, pklen).begin(), pklen,
+            sig_bytes.end() - 2 * pklen
         );
 
         // Copy the second public key
-        const auto offset1 = offset0 + PUBLIC_KEY_SIZE;
         std::copy_n(
-            in_buffer.subspan(offset1, PUBLIC_KEY_SIZE).begin(),
-            PUBLIC_KEY_SIZE,
-            sig_bytes.begin() + SumKesSignature<Depth - 1>::size +
-                PUBLIC_KEY_SIZE
+            in_buffer.subspan(offset1, pklen).begin(), pklen,
+            sig_bytes.end() - pklen
         );
 
         return SumKesSignature<Depth>(sig_bytes);
@@ -726,8 +732,8 @@ class SumKesPrivateKey
     ) const -> SumKesSignature<Depth>
         requires KesDepth0<Depth>
     {
-        auto pk = SecureByteArray<uint8_t, KesPublicKey::size>();
-        auto sk = SecureByteArray<uint8_t, 64>();
+        auto pk = SecureByteArray<uint8_t, crypto_sign_PUBLICKEYBYTES>();
+        auto sk = SecureByteArray<uint8_t, crypto_sign_SECRETKEYBYTES>();
         crypto_sign_seed_keypair(pk.data(), sk.data(), this->prv_.data());
 
         auto sig = std::array<uint8_t, SumKesSignature<0>::size>();
